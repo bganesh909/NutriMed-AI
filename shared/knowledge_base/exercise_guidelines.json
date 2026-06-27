@@ -1,0 +1,227 @@
+{
+  "general_guidelines": {
+    "source": "ACSM Guidelines for Exercise Testing and Prescription, 11th Edition; WHO 2020 Guidelines",
+    "adults_18_64": {
+      "aerobic": {
+        "moderate_intensity_minutes_per_week": 150,
+        "vigorous_intensity_minutes_per_week": 75,
+        "or_combination": "equivalent combination of moderate and vigorous",
+        "bout_minimum_minutes": 10,
+        "frequency_days_per_week": {"min": 3, "max": 5},
+        "examples_moderate": ["brisk walking", "cycling 10-12 mph", "water aerobics", "doubles tennis"],
+        "examples_vigorous": ["running", "cycling >12 mph", "swimming laps", "singles tennis", "HIIT"]
+      },
+      "resistance_training": {
+        "frequency_days_per_week": 2,
+        "major_muscle_groups": 8,
+        "sets_per_exercise": {"min": 2, "max": 4},
+        "reps_per_set": {"min": 8, "max": 12},
+        "intensity_percent_1rm": {"min": 60, "max": 80},
+        "rest_between_sets_seconds": {"min": 60, "max": 180}
+      },
+      "flexibility": {
+        "frequency_days_per_week": {"min": 2, "max": 3},
+        "hold_duration_seconds": {"min": 15, "max": 60},
+        "stretches_per_muscle": {"min": 2, "max": 4}
+      }
+    },
+    "older_adults_65_plus": {
+      "same_as_adult_with_modifications": true,
+      "additional": ["balance training 3 days/week", "reduce intensity if needed"],
+      "emphasis": ["fall prevention", "functional movements", "joint mobility"]
+    }
+  },
+  "goal_based_programming": {
+    "strength": {
+      "sets": {"min": 3, "max": 5},
+      "reps": {"min": 1, "max": 6},
+      "intensity_percent_1rm": {"min": 80, "max": 100},
+      "rest_seconds": {"min": 180, "max": 300},
+      "frequency_per_muscle_per_week": 2,
+      "tempo": "controlled eccentric, explosive concentric",
+      "progression": "increase load 2.5-5% when all reps completed"
+    },
+    "hypertrophy": {
+      "sets": {"min": 3, "max": 5},
+      "reps": {"min": 6, "max": 12},
+      "intensity_percent_1rm": {"min": 65, "max": 80},
+      "rest_seconds": {"min": 60, "max": 120},
+      "frequency_per_muscle_per_week": 2,
+      "weekly_sets_per_muscle": {"min": 10, "max": 20},
+      "tempo": "2-0-2-1 (eccentric-pause-concentric-pause)",
+      "progression": "increase volume by 10% per week, deload every 4th week"
+    },
+    "endurance": {
+      "sets": {"min": 2, "max": 3},
+      "reps": {"min": 15, "max": 25},
+      "intensity_percent_1rm": {"min": 40, "max": 60},
+      "rest_seconds": {"min": 30, "max": 60},
+      "cardio_zone_heart_rate_percent_max": {"min": 60, "max": 80},
+      "progression": "increase duration before intensity"
+    },
+    "weight_loss": {
+      "approach": "combination of resistance training and cardio",
+      "resistance_frequency_per_week": 3,
+      "cardio_frequency_per_week": {"min": 3, "max": 5},
+      "cardio_minutes_per_session": {"min": 30, "max": 60},
+      "hiit_sessions_per_week": {"min": 1, "max": 2},
+      "emphasis": ["compound movements", "supersets", "circuit training"],
+      "calorie_deficit_note": "Exercise should complement dietary calorie deficit, not compensate"
+    },
+    "flexibility_and_mobility": {
+      "frequency_per_week": {"min": 3, "max": 7},
+      "duration_minutes": {"min": 15, "max": 30},
+      "types": ["static stretching", "dynamic stretching", "PNF", "foam rolling", "yoga"],
+      "when": "after workout or as separate session; avoid intense static stretching before strength training"
+    }
+  },
+  "condition_specific_exercise": {
+    "type_2_diabetes": {
+      "aerobic_minutes_per_week": 150,
+      "resistance_sessions_per_week": 2,
+      "avoid": ["exercising with blood glucose >250 mg/dL with ketones", "prolonged intense exercise if hypoglycemia prone"],
+      "precautions": [
+        "Check blood glucose before and after exercise",
+        "Carry fast-acting carbohydrate",
+        "Avoid exercise during peak insulin activity",
+        "Inspect feet before and after exercise",
+        "Stay hydrated"
+      ],
+      "benefits": ["Improves insulin sensitivity for 24-72 hours", "Lowers HbA1c by 0.5-0.7%"],
+      "source": "ADA Standards of Care, ACSM Position Stand on Exercise and Type 2 Diabetes"
+    },
+    "hypertension": {
+      "aerobic_type": "moderate intensity preferred",
+      "aerobic_minutes_per_week": 150,
+      "resistance_training": "moderate intensity, avoid heavy Valsalva",
+      "avoid": ["heavy isometric holds", "extreme overhead pressing", "breath holding during exertion"],
+      "precautions": [
+        "Monitor blood pressure before exercise",
+        "Avoid exercise if BP >180/110 mmHg",
+        "Warm up and cool down gradually",
+        "Breathe continuously during resistance exercises"
+      ],
+      "expected_reduction_mmhg": {"systolic": "5-8", "diastolic": "2-5"},
+      "source": "ACSM Position Stand on Exercise and Hypertension, AHA/ACC Guidelines"
+    },
+    "osteoporosis": {
+      "recommended": ["weight-bearing exercises", "resistance training", "balance training"],
+      "avoid": ["high-impact activities if severe", "forward flexion/twisting under load", "jumping on hard surfaces"],
+      "precautions": [
+        "Start with low intensity and progress gradually",
+        "Focus on posture and alignment",
+        "Include balance exercises to prevent falls"
+      ],
+      "source": "NOF Clinician's Guide, ACSM Position Stand"
+    },
+    "cardiovascular_disease": {
+      "requires_medical_clearance": true,
+      "aerobic_intensity": "40-80% heart rate reserve based on risk stratification",
+      "frequency_per_week": {"min": 3, "max": 5},
+      "duration_minutes": {"min": 20, "max": 60},
+      "resistance_training": "low to moderate intensity after cardiac rehabilitation",
+      "avoid": ["unmonitored high-intensity exercise", "exercise in extreme temperatures"],
+      "warning_signs_to_stop": [
+        "chest pain or pressure",
+        "unusual shortness of breath",
+        "dizziness or lightheadedness",
+        "irregular heartbeat",
+        "excessive fatigue"
+      ],
+      "source": "AHA/AACVPR Cardiac Rehabilitation Guidelines"
+    },
+    "low_back_pain": {
+      "recommended": ["core stabilization", "walking", "swimming", "yoga", "Pilates"],
+      "avoid": ["heavy deadlifts initially", "sit-ups/crunches", "extreme spinal flexion/extension"],
+      "progression": ["pain-free ROM first", "then isometric core", "then dynamic movements", "then loading"],
+      "source": "ACSM, NICE Guidelines on Low Back Pain"
+    },
+    "obesity_bmi_30_plus": {
+      "start_with": "low-impact activities (walking, cycling, swimming, elliptical)",
+      "initial_duration_minutes": 20,
+      "build_up_to_minutes": 60,
+      "frequency_per_week": 5,
+      "resistance_training": "2-3 days/week, machine-based initially for joint support",
+      "precautions": [
+        "Progress duration before intensity",
+        "Use supportive footwear",
+        "Monitor for joint pain",
+        "Ensure adequate hydration",
+        "Consider aquatic exercise to reduce joint stress"
+      ],
+      "source": "ACSM Position Stand on Overweight and Obesity"
+    },
+    "pregnancy": {
+      "cleared_by_physician": true,
+      "aerobic_minutes_per_week": 150,
+      "intensity": "moderate, talk test",
+      "recommended": ["walking", "swimming", "prenatal yoga", "stationary cycling", "low-impact aerobics"],
+      "avoid": ["contact sports", "supine exercises after first trimester", "hot yoga", "scuba diving", "activities with fall risk"],
+      "warning_signs_to_stop": ["vaginal bleeding", "regular contractions", "amniotic fluid leakage", "calf pain or swelling", "chest pain"],
+      "source": "ACOG Committee Opinion on Exercise During Pregnancy"
+    }
+  },
+  "heart_rate_zones": {
+    "max_heart_rate_formula": "220 - age (Tanaka: 208 - 0.7 * age for better accuracy)",
+    "zones": {
+      "zone_1_recovery": {"percent_max_hr": {"low": 50, "high": 60}, "description": "Very light activity, active recovery"},
+      "zone_2_fat_burn": {"percent_max_hr": {"low": 60, "high": 70}, "description": "Light aerobic, fat oxidation, base building"},
+      "zone_3_aerobic": {"percent_max_hr": {"low": 70, "high": 80}, "description": "Moderate aerobic, improved cardiovascular fitness"},
+      "zone_4_threshold": {"percent_max_hr": {"low": 80, "high": 90}, "description": "Hard effort, lactate threshold training"},
+      "zone_5_vo2max": {"percent_max_hr": {"low": 90, "high": 100}, "description": "Maximum effort, short intervals only"}
+    },
+    "rpe_scale": {
+      "1_2": "Very light",
+      "3_4": "Light",
+      "5_6": "Moderate",
+      "7_8": "Hard",
+      "9_10": "Maximum"
+    }
+  },
+  "warm_up_and_cool_down": {
+    "warm_up": {
+      "duration_minutes": {"min": 5, "max": 10},
+      "components": [
+        "Light aerobic activity (walking, cycling) for 3-5 minutes",
+        "Dynamic stretching targeting workout muscles",
+        "Movement preparation/activation drills",
+        "Progressive intensity ramp-up"
+      ]
+    },
+    "cool_down": {
+      "duration_minutes": {"min": 5, "max": 10},
+      "components": [
+        "Gradual reduction of exercise intensity",
+        "Light walking for 3-5 minutes",
+        "Static stretching of worked muscles (15-30 second holds)",
+        "Deep breathing exercises"
+      ]
+    }
+  },
+  "recovery": {
+    "sleep": {
+      "hours_recommended": {"min": 7, "max": 9},
+      "importance": "Growth hormone release, muscle repair, neural recovery"
+    },
+    "rest_between_sessions": {
+      "same_muscle_group_hours": 48,
+      "after_high_intensity_hours": 72
+    },
+    "deload_protocol": {
+      "frequency": "Every 4-6 weeks",
+      "volume_reduction_percent": 40,
+      "intensity_reduction_percent": 20,
+      "purpose": "Prevent overtraining, allow supercompensation"
+    },
+    "overtraining_signs": [
+      "Persistent fatigue",
+      "Decreased performance",
+      "Elevated resting heart rate",
+      "Frequent illness",
+      "Insomnia",
+      "Mood disturbances",
+      "Loss of appetite",
+      "Persistent muscle soreness"
+    ]
+  }
+}

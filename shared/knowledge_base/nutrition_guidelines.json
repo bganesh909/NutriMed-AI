@@ -1,0 +1,286 @@
+{
+  "rda_values": {
+    "macronutrients": {
+      "protein": {
+        "unit": "g/kg/day",
+        "recommendations": {
+          "sedentary_adult": 0.8,
+          "active_adult": 1.2,
+          "endurance_athlete": 1.4,
+          "strength_athlete": 1.6,
+          "elderly_65_plus": 1.2,
+          "pregnant": 1.1,
+          "lactating": 1.3,
+          "weight_loss": 1.6,
+          "muscle_gain": 2.0
+        },
+        "safe_upper_limit": 2.5,
+        "source": "ISSN Position Stand on Protein and Exercise (2017)"
+      },
+      "carbohydrates": {
+        "unit": "g/kg/day",
+        "recommendations": {
+          "sedentary": 3.0,
+          "light_activity": 4.0,
+          "moderate_activity": 5.0,
+          "high_activity": 7.0,
+          "endurance_athlete": 10.0
+        },
+        "minimum_daily_g": 130,
+        "fiber_g_per_day": {
+          "male_19_50": 38,
+          "male_51_plus": 30,
+          "female_19_50": 25,
+          "female_51_plus": 21
+        },
+        "source": "Dietary Reference Intakes, Institute of Medicine"
+      },
+      "fat": {
+        "unit": "percent_of_calories",
+        "recommendations": {
+          "minimum": 20,
+          "optimal_range_low": 25,
+          "optimal_range_high": 35,
+          "maximum": 40
+        },
+        "omega_3_g_per_day": {
+          "ala_male": 1.6,
+          "ala_female": 1.1,
+          "epa_dha_general": 0.25,
+          "epa_dha_heart_disease": 1.0
+        },
+        "saturated_fat_max_percent": 10,
+        "trans_fat_max_percent": 1,
+        "source": "WHO Guidelines on Fat Intake, AHA Dietary Guidelines"
+      }
+    },
+    "micronutrients": {
+      "vitamins": {
+        "vitamin_a": {
+          "unit": "mcg_RAE/day",
+          "rda": {"male_adult": 900, "female_adult": 700, "pregnant": 770, "lactating": 1300},
+          "upper_limit": 3000,
+          "deficiency_signs": ["night blindness", "dry skin", "frequent infections"],
+          "food_sources": ["sweet potato", "carrots", "spinach", "liver", "eggs"]
+        },
+        "vitamin_b1_thiamine": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 1.2, "female_adult": 1.1, "pregnant": 1.4},
+          "deficiency_signs": ["fatigue", "irritability", "muscle weakness"],
+          "food_sources": ["whole grains", "pork", "legumes", "nuts", "seeds"]
+        },
+        "vitamin_b2_riboflavin": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 1.3, "female_adult": 1.1, "pregnant": 1.4},
+          "deficiency_signs": ["cracked lips", "sore throat", "skin rashes"],
+          "food_sources": ["dairy", "eggs", "lean meats", "almonds", "mushrooms"]
+        },
+        "vitamin_b3_niacin": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 16, "female_adult": 14, "pregnant": 18},
+          "upper_limit": 35,
+          "food_sources": ["chicken", "tuna", "turkey", "peanuts", "mushrooms"]
+        },
+        "vitamin_b6": {
+          "unit": "mg/day",
+          "rda": {"adult_19_50": 1.3, "male_51_plus": 1.7, "female_51_plus": 1.5, "pregnant": 1.9},
+          "upper_limit": 100,
+          "food_sources": ["chickpeas", "salmon", "chicken breast", "potatoes", "bananas"]
+        },
+        "vitamin_b9_folate": {
+          "unit": "mcg_DFE/day",
+          "rda": {"adult": 400, "pregnant": 600, "lactating": 500},
+          "upper_limit": 1000,
+          "deficiency_signs": ["megaloblastic anemia", "fatigue", "neural tube defects in pregnancy"],
+          "food_sources": ["dark leafy greens", "legumes", "fortified grains", "asparagus"]
+        },
+        "vitamin_b12": {
+          "unit": "mcg/day",
+          "rda": {"adult": 2.4, "pregnant": 2.6, "lactating": 2.8},
+          "no_upper_limit": true,
+          "deficiency_signs": ["megaloblastic anemia", "neuropathy", "fatigue", "cognitive issues"],
+          "at_risk_groups": ["vegans", "elderly", "those on metformin or PPIs"],
+          "food_sources": ["meat", "fish", "dairy", "eggs", "fortified cereals"]
+        },
+        "vitamin_c": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 90, "female_adult": 75, "smoker_add": 35, "pregnant": 85},
+          "upper_limit": 2000,
+          "food_sources": ["citrus fruits", "bell peppers", "strawberries", "broccoli", "kiwi"]
+        },
+        "vitamin_d": {
+          "unit": "IU/day",
+          "rda": {"adult_19_70": 600, "adult_71_plus": 800, "pregnant": 600},
+          "upper_limit": 4000,
+          "optimal_serum_level_ng_ml": {"low": 30, "high": 50},
+          "deficiency_signs": ["bone pain", "muscle weakness", "fatigue", "depression"],
+          "food_sources": ["fatty fish", "fortified milk", "egg yolks", "mushrooms exposed to UV"]
+        },
+        "vitamin_e": {
+          "unit": "mg/day",
+          "rda": {"adult": 15, "lactating": 19},
+          "upper_limit": 1000,
+          "food_sources": ["sunflower seeds", "almonds", "spinach", "avocado"]
+        },
+        "vitamin_k": {
+          "unit": "mcg/day",
+          "adequate_intake": {"male_adult": 120, "female_adult": 90},
+          "food_sources": ["kale", "spinach", "broccoli", "Brussels sprouts", "natto"]
+        }
+      },
+      "minerals": {
+        "calcium": {
+          "unit": "mg/day",
+          "rda": {"adult_19_50": 1000, "female_51_plus": 1200, "male_51_70": 1000, "male_71_plus": 1200},
+          "upper_limit": 2500,
+          "food_sources": ["dairy", "sardines", "tofu", "kale", "fortified plant milk"]
+        },
+        "iron": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 8, "female_19_50": 18, "female_51_plus": 8, "pregnant": 27},
+          "upper_limit": 45,
+          "note": "Non-heme iron absorption enhanced by vitamin C",
+          "food_sources": ["red meat", "lentils", "spinach", "fortified cereals", "tofu"]
+        },
+        "magnesium": {
+          "unit": "mg/day",
+          "rda": {"male_19_30": 400, "male_31_plus": 420, "female_19_30": 310, "female_31_plus": 320},
+          "upper_limit_supplement": 350,
+          "food_sources": ["pumpkin seeds", "almonds", "spinach", "black beans", "dark chocolate"]
+        },
+        "zinc": {
+          "unit": "mg/day",
+          "rda": {"male_adult": 11, "female_adult": 8, "pregnant": 11, "lactating": 12},
+          "upper_limit": 40,
+          "food_sources": ["oysters", "beef", "crab", "chickpeas", "pumpkin seeds"]
+        },
+        "selenium": {
+          "unit": "mcg/day",
+          "rda": {"adult": 55, "pregnant": 60, "lactating": 70},
+          "upper_limit": 400,
+          "food_sources": ["Brazil nuts", "tuna", "sardines", "chicken", "eggs"]
+        },
+        "potassium": {
+          "unit": "mg/day",
+          "adequate_intake": {"male_adult": 3400, "female_adult": 2600},
+          "food_sources": ["bananas", "potatoes", "beans", "yogurt", "salmon"]
+        },
+        "sodium": {
+          "unit": "mg/day",
+          "adequate_intake": 1500,
+          "upper_limit": 2300,
+          "hypertension_limit": 1500,
+          "source": "AHA recommendation"
+        },
+        "iodine": {
+          "unit": "mcg/day",
+          "rda": {"adult": 150, "pregnant": 220, "lactating": 290},
+          "upper_limit": 1100,
+          "food_sources": ["iodized salt", "seaweed", "cod", "dairy", "shrimp"]
+        },
+        "chromium": {
+          "unit": "mcg/day",
+          "adequate_intake": {"male_19_50": 35, "male_51_plus": 30, "female_19_50": 25, "female_51_plus": 20},
+          "food_sources": ["broccoli", "grape juice", "whole grains", "garlic", "basil"]
+        }
+      }
+    },
+    "water_intake": {
+      "unit": "mL/day",
+      "adequate_intake": {
+        "male_adult": 3700,
+        "female_adult": 2700,
+        "pregnant": 3000,
+        "lactating": 3800
+      },
+      "exercise_additional_ml_per_hour": 500,
+      "hot_climate_additional_ml": 500,
+      "source": "Institute of Medicine, Dietary Reference Intakes"
+    }
+  },
+  "calorie_estimation": {
+    "bmr_equations": {
+      "mifflin_st_jeor": {
+        "male": "10 * weight_kg + 6.25 * height_cm - 5 * age - 5 + 5",
+        "female": "10 * weight_kg + 6.25 * height_cm - 5 * age - 161",
+        "note": "Most accurate for overweight and obese individuals"
+      },
+      "harris_benedict_revised": {
+        "male": "88.362 + 13.397 * weight_kg + 4.799 * height_cm - 5.677 * age",
+        "female": "447.593 + 9.247 * weight_kg + 3.098 * height_cm - 4.330 * age"
+      }
+    },
+    "activity_multipliers": {
+      "sedentary": {"factor": 1.2, "description": "Little or no exercise, desk job"},
+      "lightly_active": {"factor": 1.375, "description": "Light exercise 1-3 days/week"},
+      "moderately_active": {"factor": 1.55, "description": "Moderate exercise 3-5 days/week"},
+      "very_active": {"factor": 1.725, "description": "Hard exercise 6-7 days/week"},
+      "extremely_active": {"factor": 1.9, "description": "Very hard exercise, physical job, 2x training"}
+    },
+    "goal_adjustments_kcal": {
+      "aggressive_weight_loss": -750,
+      "weight_loss": -500,
+      "mild_weight_loss": -250,
+      "maintenance": 0,
+      "lean_bulk": 250,
+      "muscle_gain": 400,
+      "aggressive_bulk": 600
+    },
+    "safe_weight_loss_rate_kg_per_week": {"min": 0.25, "max": 1.0},
+    "minimum_calories": {"male": 1500, "female": 1200}
+  },
+  "meal_timing": {
+    "general_guidelines": {
+      "meals_per_day": {"min": 3, "max": 6},
+      "protein_per_meal_max_g": 40,
+      "pre_workout_hours_before": 2,
+      "post_workout_window_hours": 2,
+      "last_meal_hours_before_sleep": 2
+    },
+    "intermittent_fasting": {
+      "16_8": {"eating_window_hours": 8, "fasting_hours": 16},
+      "14_10": {"eating_window_hours": 10, "fasting_hours": 14},
+      "5_2": {"normal_days": 5, "reduced_calorie_days": 2, "reduced_day_calories": 500}
+    }
+  },
+  "condition_specific_nutrition": {
+    "type_2_diabetes": {
+      "carb_limit_g_per_meal": 45,
+      "glycemic_index_target": "low_to_moderate",
+      "fiber_minimum_g_per_day": 25,
+      "avoid": ["added sugars", "refined carbohydrates", "sugary beverages"],
+      "emphasize": ["non-starchy vegetables", "whole grains", "lean protein", "healthy fats"],
+      "source": "ADA Standards of Medical Care in Diabetes"
+    },
+    "hypertension": {
+      "diet": "DASH",
+      "sodium_max_mg": 1500,
+      "potassium_target_mg": 4700,
+      "emphasize": ["fruits", "vegetables", "whole grains", "low-fat dairy", "lean protein"],
+      "avoid": ["processed foods", "canned soups", "deli meats", "excessive alcohol"],
+      "source": "AHA/ACC Hypertension Guidelines, DASH Eating Plan"
+    },
+    "hyperlipidemia": {
+      "saturated_fat_max_percent": 7,
+      "dietary_cholesterol_max_mg": 200,
+      "fiber_soluble_g_per_day": 10,
+      "emphasize": ["oats", "barley", "legumes", "nuts", "fatty fish", "plant sterols"],
+      "avoid": ["trans fats", "fried foods", "full-fat dairy", "processed meats"],
+      "source": "ATP III Guidelines, AHA Diet and Lifestyle Recommendations"
+    },
+    "chronic_kidney_disease": {
+      "protein_g_per_kg": 0.8,
+      "sodium_max_mg": 2000,
+      "potassium_limit": "individualized based on labs",
+      "phosphorus_limit": "individualized based on labs",
+      "avoid": ["high-protein diets", "processed foods", "dark colas", "dairy excess"],
+      "source": "KDOQI Clinical Practice Guidelines"
+    },
+    "iron_deficiency_anemia": {
+      "iron_rich_foods": ["red meat", "organ meats", "lentils", "spinach", "fortified cereals"],
+      "enhancers": ["vitamin C rich foods with iron-rich meals"],
+      "inhibitors_to_avoid_with_iron": ["tea", "coffee", "calcium supplements", "phytates"],
+      "source": "WHO Guidelines on Iron Supplementation"
+    }
+  }
+}

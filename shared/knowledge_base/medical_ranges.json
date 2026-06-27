@@ -1,0 +1,629 @@
+{
+  "biomarkers": {
+    "complete_blood_count": {
+      "hemoglobin": {
+        "name": "Hemoglobin",
+        "unit": "g/dL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 13.5, "high": 17.5},
+            "elderly_60_plus": {"low": 12.5, "high": 17.0},
+            "child_6_12": {"low": 11.5, "high": 15.5}
+          },
+          "female": {
+            "adult": {"low": 12.0, "high": 16.0},
+            "pregnant": {"low": 11.0, "high": 14.0},
+            "elderly_60_plus": {"low": 11.5, "high": 16.0},
+            "child_6_12": {"low": 11.5, "high": 15.5}
+          }
+        },
+        "critical_low": 7.0,
+        "critical_high": 20.0,
+        "description": "Oxygen-carrying protein in red blood cells",
+        "clinical_significance": "Low values indicate anemia; high values may indicate polycythemia or dehydration"
+      },
+      "hematocrit": {
+        "name": "Hematocrit",
+        "unit": "%",
+        "ranges": {
+          "male": {
+            "adult": {"low": 38.3, "high": 48.6}
+          },
+          "female": {
+            "adult": {"low": 35.5, "high": 44.9},
+            "pregnant": {"low": 33.0, "high": 44.0}
+          }
+        },
+        "critical_low": 20.0,
+        "critical_high": 60.0,
+        "description": "Percentage of blood volume occupied by red blood cells"
+      },
+      "rbc_count": {
+        "name": "Red Blood Cell Count",
+        "unit": "million/uL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 4.7, "high": 6.1}
+          },
+          "female": {
+            "adult": {"low": 4.2, "high": 5.4}
+          }
+        },
+        "description": "Total number of red blood cells per microliter"
+      },
+      "wbc_count": {
+        "name": "White Blood Cell Count",
+        "unit": "cells/uL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 4500, "high": 11000},
+            "child": {"low": 5000, "high": 13000}
+          }
+        },
+        "critical_low": 2000,
+        "critical_high": 30000,
+        "description": "Total number of white blood cells indicating immune function"
+      },
+      "platelet_count": {
+        "name": "Platelet Count",
+        "unit": "cells/uL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 150000, "high": 400000}
+          }
+        },
+        "critical_low": 50000,
+        "critical_high": 1000000,
+        "description": "Blood clotting cells"
+      },
+      "mcv": {
+        "name": "Mean Corpuscular Volume",
+        "unit": "fL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 80.0, "high": 100.0}
+          }
+        },
+        "description": "Average red blood cell size; low in iron deficiency, high in B12/folate deficiency"
+      },
+      "mch": {
+        "name": "Mean Corpuscular Hemoglobin",
+        "unit": "pg",
+        "ranges": {
+          "all": {
+            "adult": {"low": 27.0, "high": 33.0}
+          }
+        },
+        "description": "Average hemoglobin content per red blood cell"
+      },
+      "mchc": {
+        "name": "Mean Corpuscular Hemoglobin Concentration",
+        "unit": "g/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 32.0, "high": 36.0}
+          }
+        },
+        "description": "Average hemoglobin concentration in red blood cells"
+      },
+      "rdw": {
+        "name": "Red Cell Distribution Width",
+        "unit": "%",
+        "ranges": {
+          "all": {
+            "adult": {"low": 11.5, "high": 14.5}
+          }
+        },
+        "description": "Variation in red blood cell size; elevated in mixed anemias"
+      },
+      "esr": {
+        "name": "Erythrocyte Sedimentation Rate",
+        "unit": "mm/hr",
+        "ranges": {
+          "male": {
+            "adult_under_50": {"low": 0, "high": 15},
+            "adult_over_50": {"low": 0, "high": 20}
+          },
+          "female": {
+            "adult_under_50": {"low": 0, "high": 20},
+            "adult_over_50": {"low": 0, "high": 30}
+          }
+        },
+        "description": "Non-specific marker of inflammation"
+      }
+    },
+    "lipid_panel": {
+      "total_cholesterol": {
+        "name": "Total Cholesterol",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "desirable": {"low": 0, "high": 200},
+            "borderline_high": {"low": 200, "high": 239},
+            "high": {"low": 240, "high": 9999}
+          }
+        },
+        "description": "Total blood cholesterol level per ATP III guidelines",
+        "clinical_significance": "Major risk factor for cardiovascular disease"
+      },
+      "ldl_cholesterol": {
+        "name": "LDL Cholesterol",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "optimal": {"low": 0, "high": 100},
+            "near_optimal": {"low": 100, "high": 129},
+            "borderline_high": {"low": 130, "high": 159},
+            "high": {"low": 160, "high": 189},
+            "very_high": {"low": 190, "high": 9999}
+          }
+        },
+        "description": "Low-density lipoprotein; primary target for cholesterol management"
+      },
+      "hdl_cholesterol": {
+        "name": "HDL Cholesterol",
+        "unit": "mg/dL",
+        "ranges": {
+          "male": {
+            "low_risk": {"low": 60, "high": 9999},
+            "moderate": {"low": 40, "high": 59},
+            "high_risk": {"low": 0, "high": 40}
+          },
+          "female": {
+            "low_risk": {"low": 60, "high": 9999},
+            "moderate": {"low": 50, "high": 59},
+            "high_risk": {"low": 0, "high": 50}
+          }
+        },
+        "description": "High-density lipoprotein; protective against cardiovascular disease"
+      },
+      "triglycerides": {
+        "name": "Triglycerides",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "normal": {"low": 0, "high": 150},
+            "borderline_high": {"low": 150, "high": 199},
+            "high": {"low": 200, "high": 499},
+            "very_high": {"low": 500, "high": 9999}
+          }
+        },
+        "critical_high": 500,
+        "description": "Blood fat level; very high levels risk pancreatitis"
+      },
+      "vldl": {
+        "name": "VLDL Cholesterol",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "normal": {"low": 2, "high": 30}
+          }
+        },
+        "description": "Very low-density lipoprotein; carries triglycerides"
+      }
+    },
+    "metabolic_panel": {
+      "fasting_glucose": {
+        "name": "Fasting Blood Glucose",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "normal": {"low": 70, "high": 99},
+            "prediabetes": {"low": 100, "high": 125},
+            "diabetes": {"low": 126, "high": 9999}
+          }
+        },
+        "critical_low": 50,
+        "critical_high": 400,
+        "description": "Blood sugar after 8-12 hour fast; per ADA guidelines"
+      },
+      "hba1c": {
+        "name": "Hemoglobin A1c",
+        "unit": "%",
+        "ranges": {
+          "all": {
+            "normal": {"low": 4.0, "high": 5.6},
+            "prediabetes": {"low": 5.7, "high": 6.4},
+            "diabetes": {"low": 6.5, "high": 15.0}
+          }
+        },
+        "description": "Average blood sugar over 2-3 months; per ADA diagnostic criteria"
+      },
+      "insulin_fasting": {
+        "name": "Fasting Insulin",
+        "unit": "uIU/mL",
+        "ranges": {
+          "all": {
+            "optimal": {"low": 2.0, "high": 5.0},
+            "normal": {"low": 2.6, "high": 24.9},
+            "insulin_resistant": {"low": 25.0, "high": 9999}
+          }
+        },
+        "description": "Fasting insulin level; elevated suggests insulin resistance"
+      },
+      "bun": {
+        "name": "Blood Urea Nitrogen",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 7, "high": 20}
+          }
+        },
+        "description": "Kidney function marker; elevated in dehydration or kidney disease"
+      },
+      "creatinine": {
+        "name": "Serum Creatinine",
+        "unit": "mg/dL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 0.74, "high": 1.35}
+          },
+          "female": {
+            "adult": {"low": 0.59, "high": 1.04}
+          }
+        },
+        "description": "Kidney function marker; used to estimate glomerular filtration rate"
+      },
+      "egfr": {
+        "name": "Estimated Glomerular Filtration Rate",
+        "unit": "mL/min/1.73m2",
+        "ranges": {
+          "all": {
+            "normal": {"low": 90, "high": 120},
+            "mildly_decreased": {"low": 60, "high": 89},
+            "moderately_decreased": {"low": 30, "high": 59},
+            "severely_decreased": {"low": 15, "high": 29},
+            "kidney_failure": {"low": 0, "high": 15}
+          }
+        },
+        "description": "Estimated kidney filtration rate; per KDIGO staging"
+      },
+      "uric_acid": {
+        "name": "Uric Acid",
+        "unit": "mg/dL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 3.4, "high": 7.0}
+          },
+          "female": {
+            "adult": {"low": 2.4, "high": 6.0}
+          }
+        },
+        "description": "Elevated levels associated with gout and kidney stones"
+      },
+      "sodium": {
+        "name": "Sodium",
+        "unit": "mEq/L",
+        "ranges": {
+          "all": {
+            "adult": {"low": 136, "high": 145}
+          }
+        },
+        "critical_low": 120,
+        "critical_high": 160,
+        "description": "Electrolyte essential for fluid balance and nerve function"
+      },
+      "potassium": {
+        "name": "Potassium",
+        "unit": "mEq/L",
+        "ranges": {
+          "all": {
+            "adult": {"low": 3.5, "high": 5.0}
+          }
+        },
+        "critical_low": 2.5,
+        "critical_high": 6.5,
+        "description": "Electrolyte critical for heart rhythm and muscle function"
+      },
+      "calcium": {
+        "name": "Calcium",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 8.5, "high": 10.5}
+          }
+        },
+        "critical_low": 6.0,
+        "critical_high": 13.0,
+        "description": "Essential for bone health, muscle contraction, and nerve signaling"
+      }
+    },
+    "liver_panel": {
+      "alt": {
+        "name": "Alanine Aminotransferase (ALT/SGPT)",
+        "unit": "U/L",
+        "ranges": {
+          "male": {
+            "adult": {"low": 7, "high": 56}
+          },
+          "female": {
+            "adult": {"low": 7, "high": 45}
+          }
+        },
+        "description": "Liver enzyme; elevated in liver damage, hepatitis, fatty liver"
+      },
+      "ast": {
+        "name": "Aspartate Aminotransferase (AST/SGOT)",
+        "unit": "U/L",
+        "ranges": {
+          "male": {
+            "adult": {"low": 10, "high": 40}
+          },
+          "female": {
+            "adult": {"low": 9, "high": 32}
+          }
+        },
+        "description": "Liver and muscle enzyme; also elevated in heart or muscle damage"
+      },
+      "alp": {
+        "name": "Alkaline Phosphatase",
+        "unit": "U/L",
+        "ranges": {
+          "all": {
+            "adult": {"low": 44, "high": 147}
+          }
+        },
+        "description": "Elevated in liver and bone disease"
+      },
+      "ggt": {
+        "name": "Gamma-Glutamyl Transferase",
+        "unit": "U/L",
+        "ranges": {
+          "male": {
+            "adult": {"low": 0, "high": 65}
+          },
+          "female": {
+            "adult": {"low": 0, "high": 45}
+          }
+        },
+        "description": "Liver enzyme sensitive to alcohol use and bile duct obstruction"
+      },
+      "total_bilirubin": {
+        "name": "Total Bilirubin",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 0.1, "high": 1.2}
+          }
+        },
+        "critical_high": 12.0,
+        "description": "Breakdown product of hemoglobin; elevated in liver disease or hemolysis"
+      },
+      "direct_bilirubin": {
+        "name": "Direct Bilirubin",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 0.0, "high": 0.3}
+          }
+        },
+        "description": "Conjugated bilirubin; elevated in obstructive liver disease"
+      },
+      "albumin": {
+        "name": "Albumin",
+        "unit": "g/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 3.5, "high": 5.5}
+          }
+        },
+        "description": "Protein made by liver; low in liver disease, malnutrition, or inflammation"
+      },
+      "total_protein": {
+        "name": "Total Protein",
+        "unit": "g/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 6.0, "high": 8.3}
+          }
+        },
+        "description": "Total serum protein; includes albumin and globulin"
+      }
+    },
+    "thyroid_panel": {
+      "tsh": {
+        "name": "Thyroid Stimulating Hormone",
+        "unit": "mIU/L",
+        "ranges": {
+          "all": {
+            "adult": {"low": 0.4, "high": 4.0},
+            "pregnant_first_trimester": {"low": 0.1, "high": 2.5},
+            "pregnant_second_trimester": {"low": 0.2, "high": 3.0},
+            "pregnant_third_trimester": {"low": 0.3, "high": 3.5}
+          }
+        },
+        "description": "Primary screening test for thyroid function per ATA guidelines"
+      },
+      "free_t4": {
+        "name": "Free Thyroxine (FT4)",
+        "unit": "ng/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 0.82, "high": 1.77}
+          }
+        },
+        "description": "Active thyroid hormone; low in hypothyroidism"
+      },
+      "free_t3": {
+        "name": "Free Triiodothyronine (FT3)",
+        "unit": "pg/mL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 2.0, "high": 4.4}
+          }
+        },
+        "description": "Most active thyroid hormone"
+      }
+    },
+    "vitamins_and_minerals": {
+      "vitamin_d_25oh": {
+        "name": "25-Hydroxy Vitamin D",
+        "unit": "ng/mL",
+        "ranges": {
+          "all": {
+            "deficient": {"low": 0, "high": 20},
+            "insufficient": {"low": 20, "high": 29},
+            "sufficient": {"low": 30, "high": 100},
+            "toxic": {"low": 100, "high": 9999}
+          }
+        },
+        "description": "Primary measure of vitamin D status per Endocrine Society guidelines"
+      },
+      "vitamin_b12": {
+        "name": "Vitamin B12",
+        "unit": "pg/mL",
+        "ranges": {
+          "all": {
+            "deficient": {"low": 0, "high": 200},
+            "borderline": {"low": 200, "high": 300},
+            "normal": {"low": 300, "high": 900}
+          }
+        },
+        "description": "Essential for nerve function and red blood cell formation"
+      },
+      "folate": {
+        "name": "Serum Folate",
+        "unit": "ng/mL",
+        "ranges": {
+          "all": {
+            "deficient": {"low": 0, "high": 3.0},
+            "normal": {"low": 3.0, "high": 20.0}
+          }
+        },
+        "description": "Essential for DNA synthesis; critical during pregnancy"
+      },
+      "iron_serum": {
+        "name": "Serum Iron",
+        "unit": "ug/dL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 65, "high": 175}
+          },
+          "female": {
+            "adult": {"low": 50, "high": 170}
+          }
+        },
+        "description": "Circulating iron; low in iron deficiency anemia"
+      },
+      "ferritin": {
+        "name": "Ferritin",
+        "unit": "ng/mL",
+        "ranges": {
+          "male": {
+            "adult": {"low": 20, "high": 500}
+          },
+          "female": {
+            "adult": {"low": 20, "high": 200},
+            "pregnant": {"low": 15, "high": 150}
+          }
+        },
+        "description": "Iron storage protein; best marker for iron stores"
+      },
+      "tibc": {
+        "name": "Total Iron Binding Capacity",
+        "unit": "ug/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 250, "high": 370}
+          }
+        },
+        "description": "Reflects transferrin availability; elevated in iron deficiency"
+      },
+      "magnesium": {
+        "name": "Serum Magnesium",
+        "unit": "mg/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 1.7, "high": 2.2}
+          }
+        },
+        "critical_low": 1.0,
+        "description": "Essential mineral for muscle, nerve, and enzyme function"
+      },
+      "zinc": {
+        "name": "Serum Zinc",
+        "unit": "ug/dL",
+        "ranges": {
+          "all": {
+            "adult": {"low": 60, "high": 120}
+          }
+        },
+        "description": "Trace mineral important for immune function and wound healing"
+      }
+    },
+    "hormones": {
+      "testosterone_total": {
+        "name": "Total Testosterone",
+        "unit": "ng/dL",
+        "ranges": {
+          "male": {
+            "adult_19_39": {"low": 264, "high": 916},
+            "adult_40_59": {"low": 200, "high": 800},
+            "adult_60_plus": {"low": 170, "high": 700}
+          },
+          "female": {
+            "adult": {"low": 15, "high": 70}
+          }
+        },
+        "description": "Primary male sex hormone; important for muscle mass and bone density"
+      },
+      "cortisol_morning": {
+        "name": "Morning Cortisol",
+        "unit": "ug/dL",
+        "ranges": {
+          "all": {
+            "morning_6_8am": {"low": 6.2, "high": 19.4},
+            "afternoon_4pm": {"low": 2.3, "high": 11.9}
+          }
+        },
+        "description": "Stress hormone; follows diurnal pattern"
+      },
+      "dhea_s": {
+        "name": "DHEA-Sulfate",
+        "unit": "ug/dL",
+        "ranges": {
+          "male": {
+            "adult_20_29": {"low": 280, "high": 640},
+            "adult_30_39": {"low": 120, "high": 520},
+            "adult_40_49": {"low": 95, "high": 530},
+            "adult_50_59": {"low": 70, "high": 310}
+          },
+          "female": {
+            "adult_20_29": {"low": 65, "high": 380},
+            "adult_30_39": {"low": 45, "high": 270},
+            "adult_40_49": {"low": 32, "high": 240},
+            "adult_50_59": {"low": 26, "high": 200}
+          }
+        },
+        "description": "Adrenal hormone precursor; declines with age"
+      }
+    },
+    "inflammation_markers": {
+      "crp": {
+        "name": "C-Reactive Protein",
+        "unit": "mg/L",
+        "ranges": {
+          "all": {
+            "low_risk": {"low": 0, "high": 1.0},
+            "moderate_risk": {"low": 1.0, "high": 3.0},
+            "high_risk": {"low": 3.0, "high": 10.0},
+            "acute_inflammation": {"low": 10.0, "high": 9999}
+          }
+        },
+        "description": "Marker of systemic inflammation and cardiovascular risk per AHA/CDC guidelines"
+      },
+      "homocysteine": {
+        "name": "Homocysteine",
+        "unit": "umol/L",
+        "ranges": {
+          "all": {
+            "normal": {"low": 5.0, "high": 15.0},
+            "elevated": {"low": 15.0, "high": 30.0},
+            "high": {"low": 30.0, "high": 100.0}
+          }
+        },
+        "description": "Elevated levels associated with cardiovascular disease and B-vitamin deficiency"
+      }
+    }
+  }
+}

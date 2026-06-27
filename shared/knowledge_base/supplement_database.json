@@ -1,0 +1,384 @@
+{
+  "supplements": [
+    {
+      "name": "Vitamin D3 (Cholecalciferol)",
+      "category": "vitamin",
+      "forms": ["cholecalciferol (D3)", "ergocalciferol (D2)"],
+      "preferred_form": "cholecalciferol (D3)",
+      "dosage": {
+        "maintenance": "1000-2000 IU/day",
+        "deficiency_correction": "5000 IU/day for 8-12 weeks, then maintenance",
+        "safe_upper_limit": "4000 IU/day (10000 IU with monitoring)"
+      },
+      "timing": "With a meal containing fat for optimal absorption",
+      "indications": ["serum 25(OH)D <30 ng/mL", "limited sun exposure", "dark skin pigmentation", "obesity", "malabsorption", "elderly"],
+      "benefits": ["bone health", "immune function", "mood regulation", "muscle function"],
+      "interactions": [
+        {"drug": "thiazide diuretics", "effect": "may increase calcium levels"},
+        {"drug": "steroids", "effect": "may reduce calcium absorption"},
+        {"drug": "statins", "effect": "generally safe, may have synergistic benefit"},
+        {"drug": "orlistat", "effect": "may reduce vitamin D absorption"}
+      ],
+      "contraindications": ["hypercalcemia", "granulomatous disease", "severe kidney disease"],
+      "side_effects": ["hypercalcemia at very high doses", "nausea", "kidney stones (rare)"],
+      "evidence_level": "strong",
+      "sources": ["Endocrine Society Clinical Practice Guideline 2011", "IOM 2011"]
+    },
+    {
+      "name": "Omega-3 Fatty Acids (Fish Oil)",
+      "category": "essential_fatty_acid",
+      "forms": ["fish oil", "krill oil", "algal oil (vegan)"],
+      "preferred_form": "triglyceride form fish oil or algal oil",
+      "dosage": {
+        "general_health": "250-500 mg EPA+DHA/day",
+        "cardiovascular": "1000 mg EPA+DHA/day",
+        "triglyceride_lowering": "2000-4000 mg EPA+DHA/day",
+        "safe_upper_limit": "5000 mg EPA+DHA/day"
+      },
+      "timing": "With meals to reduce fishy burps and improve absorption",
+      "indications": ["elevated triglycerides", "low dietary fish intake", "cardiovascular risk", "inflammatory conditions"],
+      "benefits": ["lower triglycerides", "anti-inflammatory", "cardiovascular protection", "brain health", "joint health"],
+      "interactions": [
+        {"drug": "warfarin/blood thinners", "effect": "may increase bleeding risk at high doses"},
+        {"drug": "blood pressure medications", "effect": "additive blood pressure lowering"},
+        {"drug": "orlistat", "effect": "may reduce absorption"}
+      ],
+      "contraindications": ["fish/shellfish allergy (use algal oil)", "active bleeding disorders"],
+      "side_effects": ["fishy aftertaste", "GI upset", "loose stools at high doses"],
+      "evidence_level": "strong",
+      "sources": ["AHA Scientific Statement 2019", "REDUCE-IT Trial"]
+    },
+    {
+      "name": "Magnesium",
+      "category": "mineral",
+      "forms": ["magnesium glycinate", "magnesium citrate", "magnesium oxide", "magnesium threonate", "magnesium taurate"],
+      "preferred_form": "magnesium glycinate (best absorption, least GI side effects)",
+      "dosage": {
+        "general": "200-400 mg elemental magnesium/day",
+        "sleep_support": "200-400 mg before bed",
+        "muscle_cramps": "200-400 mg/day",
+        "safe_upper_limit_supplement": "350 mg/day (from supplements)"
+      },
+      "timing": "Evening for sleep support; with meals for general supplementation",
+      "indications": ["muscle cramps", "poor sleep", "low dietary intake", "diabetes", "alcohol use", "PPI use", "athletes"],
+      "benefits": ["muscle relaxation", "sleep quality", "blood sugar regulation", "blood pressure support", "migraine prevention"],
+      "interactions": [
+        {"drug": "antibiotics (tetracyclines, fluoroquinolones)", "effect": "reduces antibiotic absorption; separate by 2 hours"},
+        {"drug": "bisphosphonates", "effect": "reduces drug absorption; separate by 2 hours"},
+        {"drug": "diuretics", "effect": "may alter magnesium levels"},
+        {"drug": "proton pump inhibitors", "effect": "long-term PPI use depletes magnesium"}
+      ],
+      "contraindications": ["severe kidney disease (eGFR <30)", "myasthenia gravis"],
+      "side_effects": ["diarrhea (especially oxide form)", "nausea", "abdominal cramping"],
+      "evidence_level": "strong",
+      "sources": ["NIH Office of Dietary Supplements", "Nutrients 2017 systematic review"]
+    },
+    {
+      "name": "Vitamin B12 (Cobalamin)",
+      "category": "vitamin",
+      "forms": ["methylcobalamin", "cyanocobalamin", "hydroxocobalamin", "adenosylcobalamin"],
+      "preferred_form": "methylcobalamin (active form)",
+      "dosage": {
+        "maintenance": "250-500 mcg/day",
+        "deficiency_correction": "1000-2000 mcg/day for 1-3 months",
+        "vegan_maintenance": "250-1000 mcg/day or 2500 mcg/week"
+      },
+      "timing": "Morning, with or without food",
+      "indications": ["serum B12 <300 pg/mL", "vegan/vegetarian diet", "elderly", "metformin use", "PPI use", "pernicious anemia"],
+      "benefits": ["red blood cell formation", "neurological function", "energy metabolism", "homocysteine reduction"],
+      "interactions": [
+        {"drug": "metformin", "effect": "metformin reduces B12 absorption"},
+        {"drug": "proton pump inhibitors", "effect": "reduce B12 absorption"},
+        {"drug": "H2 blockers", "effect": "reduce B12 absorption"},
+        {"drug": "colchicine", "effect": "reduces B12 absorption"}
+      ],
+      "contraindications": ["Leber's hereditary optic neuropathy (cyanocobalamin form)"],
+      "side_effects": ["generally very safe", "rare allergic reactions"],
+      "evidence_level": "strong",
+      "sources": ["NIH ODS", "BMJ Best Practice"]
+    },
+    {
+      "name": "Iron (Ferrous Sulfate/Bisglycinate)",
+      "category": "mineral",
+      "forms": ["ferrous sulfate", "ferrous gluconate", "ferrous bisglycinate", "ferrous fumarate", "iron polysaccharide"],
+      "preferred_form": "ferrous bisglycinate (better absorbed, fewer GI side effects)",
+      "dosage": {
+        "deficiency_correction": "25-65 mg elemental iron every other day",
+        "maintenance_female": "18 mg/day",
+        "maintenance_male": "8 mg/day",
+        "safe_upper_limit": "45 mg/day elemental iron"
+      },
+      "timing": "On empty stomach with vitamin C for best absorption; if GI upset, take with light meal",
+      "indications": ["ferritin <20 ng/mL", "iron deficiency anemia", "heavy menstrual periods", "pregnancy", "vegan/vegetarian diet"],
+      "benefits": ["corrects iron deficiency anemia", "improves energy and exercise capacity", "cognitive function"],
+      "interactions": [
+        {"drug": "levothyroxine", "effect": "reduces thyroid medication absorption; separate by 4 hours"},
+        {"drug": "antacids/PPIs", "effect": "reduce iron absorption"},
+        {"drug": "tetracycline antibiotics", "effect": "mutual reduction of absorption; separate by 2 hours"},
+        {"drug": "calcium supplements", "effect": "reduce iron absorption; separate by 2 hours"},
+        {"supplement": "zinc", "effect": "high-dose zinc may compete with iron absorption"}
+      ],
+      "contraindications": ["hemochromatosis", "iron overload syndromes", "repeated blood transfusions"],
+      "side_effects": ["constipation", "nausea", "dark stools", "stomach pain"],
+      "evidence_level": "strong",
+      "sources": ["WHO Iron Supplementation Guidelines", "Lancet 2016"]
+    },
+    {
+      "name": "Zinc",
+      "category": "mineral",
+      "forms": ["zinc picolinate", "zinc gluconate", "zinc citrate", "zinc acetate", "zinc oxide"],
+      "preferred_form": "zinc picolinate or zinc bisglycinate (best absorption)",
+      "dosage": {
+        "general": "15-30 mg/day",
+        "immune_support": "25-30 mg/day",
+        "deficiency_correction": "30-50 mg/day for 2-3 months",
+        "safe_upper_limit": "40 mg/day"
+      },
+      "timing": "With meals to reduce nausea",
+      "indications": ["serum zinc <60 ug/dL", "frequent infections", "poor wound healing", "vegetarian/vegan diet", "GI disorders"],
+      "benefits": ["immune function", "wound healing", "taste and smell", "skin health", "testosterone support"],
+      "interactions": [
+        {"drug": "antibiotics (quinolones, tetracyclines)", "effect": "reduces antibiotic absorption; separate by 2 hours"},
+        {"drug": "penicillamine", "effect": "reduces drug absorption; separate by 2 hours"},
+        {"supplement": "iron", "effect": "high-dose iron may reduce zinc absorption; take at different times"},
+        {"supplement": "copper", "effect": "high-dose zinc depletes copper; add 1-2 mg copper if >30 mg zinc/day"}
+      ],
+      "contraindications": [],
+      "side_effects": ["nausea on empty stomach", "metallic taste", "copper depletion at high doses"],
+      "evidence_level": "strong",
+      "sources": ["NIH ODS", "Nutrients 2019"]
+    },
+    {
+      "name": "Probiotics",
+      "category": "gut_health",
+      "forms": ["capsules", "sachets", "fermented foods"],
+      "key_strains": [
+        {"strain": "Lactobacillus rhamnosus GG", "evidence_for": "antibiotic-associated diarrhea, IBS"},
+        {"strain": "Saccharomyces boulardii", "evidence_for": "C. difficile prevention, traveler's diarrhea"},
+        {"strain": "Bifidobacterium lactis BB-12", "evidence_for": "general gut health, immune support"},
+        {"strain": "Lactobacillus acidophilus NCFM", "evidence_for": "lactose intolerance, general gut health"}
+      ],
+      "dosage": {
+        "general": "1-10 billion CFU/day",
+        "therapeutic": "10-50 billion CFU/day",
+        "note": "Strain-specific dosing is important"
+      },
+      "timing": "With or just before meals",
+      "indications": ["antibiotic use", "IBS", "bloating", "immune support", "after GI illness"],
+      "benefits": ["gut microbiome balance", "immune modulation", "reduced bloating", "improved digestion"],
+      "interactions": [
+        {"drug": "antibiotics", "effect": "antibiotics may kill probiotic organisms; separate by 2 hours"},
+        {"drug": "immunosuppressants", "effect": "use with caution in immunocompromised patients"}
+      ],
+      "contraindications": ["severe immunodeficiency", "critically ill patients", "short bowel syndrome"],
+      "side_effects": ["initial bloating/gas (usually resolves)", "rare systemic infections in immunocompromised"],
+      "evidence_level": "moderate",
+      "sources": ["World Gastroenterology Organisation Guidelines", "AGA Clinical Practice Guidelines 2020"]
+    },
+    {
+      "name": "Vitamin C (Ascorbic Acid)",
+      "category": "vitamin",
+      "forms": ["ascorbic acid", "sodium ascorbate", "calcium ascorbate", "liposomal vitamin C"],
+      "preferred_form": "ascorbic acid or sodium ascorbate",
+      "dosage": {
+        "general": "500-1000 mg/day",
+        "immune_support": "1000-2000 mg/day in divided doses",
+        "safe_upper_limit": "2000 mg/day"
+      },
+      "timing": "Divided doses throughout the day; with iron-rich meals to enhance iron absorption",
+      "indications": ["low dietary intake", "smokers", "iron deficiency (as absorption enhancer)", "immune support"],
+      "benefits": ["antioxidant", "collagen synthesis", "iron absorption enhancement", "immune function"],
+      "interactions": [
+        {"drug": "warfarin", "effect": "high doses may reduce warfarin effectiveness"},
+        {"drug": "chemotherapy", "effect": "may interfere with some chemotherapy agents"},
+        {"supplement": "iron", "effect": "enhances non-heme iron absorption (beneficial)"},
+        {"drug": "statins + niacin", "effect": "may reduce benefits of combination therapy"}
+      ],
+      "contraindications": ["history of oxalate kidney stones at high doses", "hemochromatosis"],
+      "side_effects": ["GI upset at high doses", "diarrhea", "kidney stones (rare, at very high doses)"],
+      "evidence_level": "moderate",
+      "sources": ["NIH ODS", "Cochrane Reviews on Vitamin C"]
+    },
+    {
+      "name": "Folate (Methylfolate)",
+      "category": "vitamin",
+      "forms": ["folic acid", "L-methylfolate (5-MTHF)", "folinic acid"],
+      "preferred_form": "L-methylfolate (active form, bypasses MTHFR variants)",
+      "dosage": {
+        "general": "400-800 mcg/day",
+        "pregnancy": "600-800 mcg/day (start before conception)",
+        "elevated_homocysteine": "800-1000 mcg/day",
+        "safe_upper_limit": "1000 mcg/day folic acid"
+      },
+      "timing": "Any time of day, with or without food",
+      "indications": ["pregnancy planning", "elevated homocysteine", "MTHFR polymorphism", "methotrexate use", "megaloblastic anemia"],
+      "benefits": ["neural tube defect prevention", "homocysteine reduction", "red blood cell formation", "DNA synthesis"],
+      "interactions": [
+        {"drug": "methotrexate", "effect": "folate may reduce methotrexate side effects but consult oncologist for cancer treatment"},
+        {"drug": "phenytoin", "effect": "mutual interaction; phenytoin reduces folate, folate may reduce phenytoin levels"},
+        {"drug": "sulfasalazine", "effect": "reduces folate absorption"}
+      ],
+      "contraindications": ["may mask B12 deficiency - always check B12 status"],
+      "side_effects": ["generally very safe", "may mask B12 deficiency symptoms"],
+      "evidence_level": "strong",
+      "sources": ["USPSTF Recommendation", "WHO Guidelines"]
+    },
+    {
+      "name": "Coenzyme Q10 (CoQ10)",
+      "category": "antioxidant",
+      "forms": ["ubiquinone", "ubiquinol"],
+      "preferred_form": "ubiquinol (reduced, more bioavailable form)",
+      "dosage": {
+        "general": "100-200 mg/day",
+        "statin_users": "100-300 mg/day",
+        "heart_failure": "200-300 mg/day",
+        "safe_upper_limit": "1200 mg/day (studied safely)"
+      },
+      "timing": "With a fat-containing meal",
+      "indications": ["statin use (myalgia)", "heart failure", "migraine prevention", "aging", "fatigue"],
+      "benefits": ["mitochondrial energy production", "antioxidant protection", "statin myalgia relief", "cardiovascular support"],
+      "interactions": [
+        {"drug": "statins", "effect": "statins deplete CoQ10; supplementation may reduce statin side effects"},
+        {"drug": "warfarin", "effect": "CoQ10 may reduce warfarin effectiveness; monitor INR"},
+        {"drug": "blood pressure medications", "effect": "may have additive blood pressure lowering"}
+      ],
+      "contraindications": [],
+      "side_effects": ["mild GI upset", "insomnia at high doses if taken late"],
+      "evidence_level": "moderate",
+      "sources": ["Mayo Clinic Evidence-Based Review", "Q-SYMBIO Trial"]
+    },
+    {
+      "name": "Curcumin (Turmeric Extract)",
+      "category": "anti_inflammatory",
+      "forms": ["standard curcumin", "curcumin with piperine", "curcumin phytosome", "nano-curcumin"],
+      "preferred_form": "curcumin phytosome (Meriva) or with piperine for bioavailability",
+      "dosage": {
+        "general": "500-1000 mg/day curcuminoids",
+        "anti_inflammatory": "1000-1500 mg/day",
+        "safe_upper_limit": "8000 mg/day (studied short-term)"
+      },
+      "timing": "With meals containing fat; piperine enhances absorption 2000%",
+      "indications": ["joint pain", "chronic inflammation", "elevated CRP", "metabolic syndrome"],
+      "benefits": ["anti-inflammatory", "antioxidant", "joint health", "cognitive support"],
+      "interactions": [
+        {"drug": "blood thinners (warfarin, aspirin)", "effect": "may increase bleeding risk"},
+        {"drug": "diabetes medications", "effect": "may enhance blood sugar lowering"},
+        {"drug": "piperine affects CYP3A4 drugs", "effect": "piperine may alter metabolism of many drugs"}
+      ],
+      "contraindications": ["gallbladder disease", "bleeding disorders", "scheduled surgery (stop 2 weeks prior)"],
+      "side_effects": ["GI upset", "diarrhea at high doses", "yellow stool"],
+      "evidence_level": "moderate",
+      "sources": ["Journal of Medicinal Food systematic review", "Cochrane Review on curcumin for osteoarthritis"]
+    },
+    {
+      "name": "Ashwagandha (Withania somnifera)",
+      "category": "adaptogen",
+      "forms": ["KSM-66 extract", "Sensoril extract", "root powder"],
+      "preferred_form": "KSM-66 standardized root extract",
+      "dosage": {
+        "general": "300-600 mg/day standardized extract",
+        "stress_reduction": "300 mg twice daily",
+        "safe_upper_limit": "1200 mg/day (studied)"
+      },
+      "timing": "Morning and evening with meals; evening dose for sleep support",
+      "indications": ["chronic stress", "elevated cortisol", "anxiety", "poor sleep", "fatigue", "athletic recovery"],
+      "benefits": ["cortisol reduction", "stress resilience", "sleep quality", "muscle strength", "thyroid support"],
+      "interactions": [
+        {"drug": "thyroid medications", "effect": "may increase thyroid hormone levels; monitor TSH"},
+        {"drug": "sedatives/benzodiazepines", "effect": "may enhance sedation"},
+        {"drug": "immunosuppressants", "effect": "may stimulate immune system; use cautiously"}
+      ],
+      "contraindications": ["hyperthyroidism", "autoimmune conditions (potential immune stimulation)", "pregnancy"],
+      "side_effects": ["drowsiness", "GI upset", "rare liver injury reported"],
+      "evidence_level": "moderate",
+      "sources": ["Journal of Alternative and Complementary Medicine", "Indian Journal of Psychological Medicine"]
+    },
+    {
+      "name": "Creatine Monohydrate",
+      "category": "performance",
+      "forms": ["creatine monohydrate", "creatine HCl", "buffered creatine"],
+      "preferred_form": "creatine monohydrate (most studied)",
+      "dosage": {
+        "maintenance": "3-5 g/day",
+        "loading_optional": "20 g/day in 4 divided doses for 5-7 days, then 3-5 g/day",
+        "body_weight_based": "0.03-0.05 g/kg/day"
+      },
+      "timing": "Any time of day, ideally post-workout with carbohydrates and protein",
+      "indications": ["strength training", "high-intensity exercise", "muscle building", "elderly muscle preservation"],
+      "benefits": ["increased strength and power", "lean muscle mass", "exercise recovery", "potential cognitive benefits"],
+      "interactions": [
+        {"drug": "nephrotoxic drugs", "effect": "may affect creatinine levels (not kidney damage); inform physician"},
+        {"drug": "NSAIDs", "effect": "theoretical additive renal stress at very high doses"},
+        {"supplement": "caffeine", "effect": "may partially attenuate creatine benefits; evidence mixed"}
+      ],
+      "contraindications": ["pre-existing severe kidney disease"],
+      "side_effects": ["water retention (1-2 kg)", "GI upset if taken on empty stomach", "muscle cramping (rare, anecdotal)"],
+      "evidence_level": "strong",
+      "sources": ["ISSN Position Stand on Creatine 2017", "International Olympic Committee Consensus Statement"]
+    },
+    {
+      "name": "Vitamin K2 (Menaquinone)",
+      "category": "vitamin",
+      "forms": ["MK-4", "MK-7"],
+      "preferred_form": "MK-7 (longer half-life, more effective at lower doses)",
+      "dosage": {
+        "general": "100-200 mcg MK-7/day",
+        "with_vitamin_d": "100 mcg MK-7 per 1000-2000 IU vitamin D",
+        "bone_health": "180-200 mcg MK-7/day"
+      },
+      "timing": "With a fat-containing meal, often paired with vitamin D",
+      "indications": ["vitamin D supplementation", "osteoporosis risk", "cardiovascular calcification risk", "low dietary intake"],
+      "benefits": ["directs calcium to bones", "prevents arterial calcification", "bone density support"],
+      "interactions": [
+        {"drug": "warfarin", "effect": "CONTRAINDICATED - vitamin K antagonizes warfarin; do NOT take without physician guidance"},
+        {"drug": "other anticoagulants (DOACs)", "effect": "generally safe, but inform physician"}
+      ],
+      "contraindications": ["warfarin use without physician approval"],
+      "side_effects": ["generally very safe at recommended doses"],
+      "evidence_level": "moderate",
+      "sources": ["Osteoporosis International meta-analysis", "Thrombosis and Haemostasis studies"]
+    },
+    {
+      "name": "Psyllium Husk (Fiber)",
+      "category": "fiber",
+      "forms": ["psyllium husk powder", "psyllium capsules"],
+      "preferred_form": "whole husk powder",
+      "dosage": {
+        "cholesterol_lowering": "5-10 g/day",
+        "blood_sugar_control": "5 g before meals",
+        "constipation": "5-10 g/day with plenty of water"
+      },
+      "timing": "15-30 minutes before meals with at least 250 mL water per 5 g",
+      "indications": ["high LDL cholesterol", "constipation", "IBS", "blood sugar management", "low fiber intake"],
+      "benefits": ["LDL cholesterol reduction (5-10%)", "blood sugar stabilization", "bowel regularity", "satiety"],
+      "interactions": [
+        {"drug": "all oral medications", "effect": "may reduce absorption; take medications 1 hour before or 2 hours after psyllium"},
+        {"drug": "diabetes medications", "effect": "may enhance blood sugar lowering"},
+        {"drug": "lithium", "effect": "may reduce lithium absorption"}
+      ],
+      "contraindications": ["esophageal or GI obstruction", "dysphagia", "fecal impaction"],
+      "side_effects": ["bloating initially", "gas", "must take with adequate water to prevent obstruction"],
+      "evidence_level": "strong",
+      "sources": ["FDA Health Claim for Soluble Fiber", "AHA Dietary Guidelines"]
+    }
+  ],
+  "general_stacking_rules": {
+    "take_together": [
+      {"supplements": ["Vitamin D3", "Vitamin K2"], "reason": "K2 directs calcium mobilized by D3 to bones"},
+      {"supplements": ["Iron", "Vitamin C"], "reason": "Vitamin C enhances non-heme iron absorption"},
+      {"supplements": ["Zinc", "Copper"], "reason": "High-dose zinc depletes copper; add 1-2mg copper if >30mg zinc"}
+    ],
+    "take_separately": [
+      {"supplements": ["Iron", "Calcium"], "reason": "Calcium inhibits iron absorption", "separation_hours": 2},
+      {"supplements": ["Iron", "Zinc"], "reason": "Compete for absorption at high doses", "separation_hours": 2},
+      {"supplements": ["Magnesium", "Calcium"], "reason": "May compete for absorption at high doses", "separation_hours": 2},
+      {"supplements": ["Fiber (Psyllium)", "Any medication/supplement"], "reason": "Fiber may bind and reduce absorption", "separation_hours": 2}
+    ],
+    "timing_framework": {
+      "morning_with_breakfast": ["Vitamin D3 + K2", "B-vitamins", "Iron (if not with calcium)", "CoQ10"],
+      "afternoon_with_lunch": ["Omega-3", "Curcumin"],
+      "evening_with_dinner": ["Magnesium", "Zinc", "Probiotics"],
+      "before_bed": ["Magnesium glycinate (for sleep)", "Ashwagandha"]
+    }
+  }
+}

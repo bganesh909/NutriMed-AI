@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Rahul Sharma",
+    "email": "rahul@example.com",
+    "password": "Test@1234",
+    "age": 28,
+    "gender": "male",
+    "weight": 75,
+    "height": 175,
+    "activity_level": "moderately_active",
+    "goals": ["muscle_gain", "health_improvement"],
+    "role": "user"
+  },
+  {
+    "name": "Priya Patel",
+    "email": "priya@example.com",
+    "password": "Test@1234",
+    "age": 32,
+    "gender": "female",
+    "weight": 62,
+    "height": 160,
+    "activity_level": "lightly_active",
+    "goals": ["fat_loss"],
+    "role": "user"
+  },
+  {
+    "name": "Admin User",
+    "email": "admin@nutrimed.ai",
+    "password": "Admin@1234",
+    "age": 35,
+    "gender": "male",
+    "weight": 80,
+    "height": 180,
+    "activity_level": "very_active",
+    "goals": ["maintenance"],
+    "role": "admin"
+  }
+]

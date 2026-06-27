@@ -1,0 +1,35 @@
+[
+  {
+    "user_email": "rahul@example.com",
+    "blood_type": "B+",
+    "allergies": [],
+    "chronic_conditions": [],
+    "medications": [],
+    "surgeries": [],
+    "family_history": ["type_2_diabetes"],
+    "dietary_restrictions": [],
+    "notes": "Active gym-goer, no known medical issues. Family history of diabetes on paternal side."
+  },
+  {
+    "user_email": "priya@example.com",
+    "blood_type": "A+",
+    "allergies": ["peanuts", "shellfish"],
+    "chronic_conditions": ["hypothyroidism_subclinical"],
+    "medications": [],
+    "surgeries": ["appendectomy_2019"],
+    "family_history": ["hypertension", "osteoporosis"],
+    "dietary_restrictions": ["vegetarian"],
+    "notes": "Vegetarian since birth. Trying to lose weight for the past 6 months. Occasional fatigue and hair fall."
+  },
+  {
+    "user_email": "admin@nutrimed.ai",
+    "blood_type": "O+",
+    "allergies": ["sulfa_drugs"],
+    "chronic_conditions": ["pre_diabetes", "fatty_liver_grade_1"],
+    "medications": ["metformin_500mg_daily"],
+    "surgeries": [],
+    "family_history": ["type_2_diabetes", "coronary_artery_disease", "hypertension"],
+    "dietary_restrictions": [],
+    "notes": "Desk job with irregular eating habits. Recently started exercising. On metformin for pre-diabetes management."
+  }
+]

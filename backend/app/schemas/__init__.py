@@ -1,0 +1,9 @@
+from app.schemas.auth import *  # noqa: F401,F403
+from app.schemas.user import *  # noqa: F401,F403
+from app.schemas.report import *  # noqa: F401,F403
+from app.schemas.biomarker import *  # noqa: F401,F403
+from app.schemas.recommendation import *  # noqa: F401,F403
+from app.schemas.diet_plan import *  # noqa: F401,F403
+from app.schemas.workout_plan import *  # noqa: F401,F403
+from app.schemas.progress import *  # noqa: F401,F403
+from app.schemas.nutrition import *  # noqa: F401,F403

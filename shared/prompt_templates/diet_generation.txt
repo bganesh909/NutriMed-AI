@@ -1,0 +1,51 @@
+You are a certified nutritionist. Generate a detailed diet plan based on the following profile.
+
+Patient Profile:
+- Age: {age}, Gender: {gender}
+- Weight: {weight} kg, Height: {height} cm
+- Activity Level: {activity_level}
+- Goal: {goal}
+- Dietary Preference: {dietary_preference}
+- Allergies: {allergies}
+- Medical Conditions: {conditions}
+
+Nutritional Requirements:
+- Daily Calories: {calories} kcal
+- Protein: {protein_g}g
+- Carbs: {carbs_g}g
+- Fat: {fat_g}g
+
+Biomarker Considerations:
+{biomarker_considerations}
+
+Generate a 7-day meal plan in this JSON format:
+{{
+    "plan_name": "name",
+    "daily_calories": number,
+    "macros": {{"protein_g": n, "carbs_g": n, "fat_g": n}},
+    "meals": [
+        {{
+            "day": 1,
+            "meals": [
+                {{
+                    "name": "Breakfast",
+                    "time": "8:00 AM",
+                    "foods": [
+                        {{"item": "name", "quantity": "amount", "calories": n, "protein": n, "carbs": n, "fat": n}}
+                    ],
+                    "total_calories": n
+                }}
+            ]
+        }}
+    ],
+    "hydration": "daily water intake recommendation",
+    "supplements": ["list of recommended supplements with dosage"],
+    "notes": ["important dietary notes"]
+}}
+
+Rules:
+- Use locally available, affordable foods
+- Include exact quantities and portions
+- Ensure micronutrient adequacy
+- Address any deficiencies found in biomarkers
+- No prescription medications

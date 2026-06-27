@@ -1,0 +1,185 @@
+version: "3.9"
+
+services:
+  api-gateway:
+    build: ./backend
+    ports: ["8000:8000"]
+    depends_on: [mongo, redis, rabbitmq]
+    env_file: .env
+    volumes: ["./backend:/app", "./uploads:/app/uploads"]
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    networks:
+      - nutrimed-network
+
+  celery-worker:
+    build: ./backend
+    depends_on: [mongo, redis, rabbitmq]
+    env_file: .env
+    volumes: ["./backend:/app", "./uploads:/app/uploads"]
+    command: celery -A app.core.celery_app worker -l info -Q reports,ai,notifications -c 4
+    restart: unless-stopped
+    networks:
+      - nutrimed-network
+
+  celery-beat:
+    build: ./backend
+    depends_on: [redis, rabbitmq]
+    env_file: .env
+    volumes: ["./backend:/app"]
+    command: celery -A app.core.celery_app beat -l info
+    restart: unless-stopped
+    networks:
+      - nutrimed-network
+
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes:
+      - mongo_data:/data/db
+      - ./seeds:/docker-entrypoint-initdb.d
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: nutrimed_secret
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nutrimed-network
+
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+    volumes: ["redis_data:/data"]
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - nutrimed-network
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports: ["5672:5672", "15672:15672"]
+    environment:
+      RABBITMQ_DEFAULT_USER: nutrimed
+      RABBITMQ_DEFAULT_PASS: nutrimed_secret
+    volumes: ["rabbitmq_data:/var/lib/rabbitmq"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - nutrimed-network
+
+  ollama:
+    image: ollama/ollama:latest
+    ports: ["11434:11434"]
+    volumes: ["ollama_data:/root/.ollama"]
+    restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
+    networks:
+      - nutrimed-network
+
+  ocr-service:
+    build: ./services/ocr-service
+    ports: ["8001:8001"]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  llm-service:
+    build: ./services/llm-service
+    ports: ["8002:8002"]
+    depends_on: [ollama]
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  nutrition-service:
+    build: ./services/nutrition-service
+    ports: ["8003:8003"]
+    depends_on: [llm-service]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  fitness-service:
+    build: ./services/fitness-service
+    ports: ["8004:8004"]
+    depends_on: [llm-service]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  pdf-service:
+    build: ./services/pdf-service
+    ports: ["8005:8005"]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  rag-service:
+    build: ./services/rag-service
+    ports: ["8006:8006"]
+    volumes: ["./shared/knowledge_base:/app/knowledge_base"]
+    restart: unless-stopped
+    env_file: .env
+    networks:
+      - nutrimed-network
+
+  frontend:
+    build: ./frontend
+    ports: ["3000:3000"]
+    depends_on: [api-gateway]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
+    restart: unless-stopped
+    networks:
+      - nutrimed-network
+
+  nginx:
+    image: nginx:alpine
+    ports: ["80:80"]
+    volumes: ["./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on: [api-gateway, frontend]
+    restart: unless-stopped
+    networks:
+      - nutrimed-network
+
+volumes:
+  mongo_data:
+  redis_data:
+  rabbitmq_data:
+  ollama_data:
+
+networks:
+  nutrimed-network:
+    driver: bridge

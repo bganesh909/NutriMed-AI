@@ -1,0 +1,553 @@
+{
+  "info": {
+    "name": "NutriMed AI",
+    "description": "Complete API collection for NutriMed AI -- Healthcare + Nutrition + Fitness platform.\n\nSetup:\n1. Set the `base_url` variable to your API base URL\n2. Run the Login request first to auto-populate the `token` variable\n3. All authenticated requests will use the token automatically",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "nutrimed-ai"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "report_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8000/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["health"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "    pm.test('Registration successful', function () {",
+                  "        pm.expect(jsonData.access_token).to.be.a('string');",
+                  "        pm.expect(jsonData.token_type).to.eql('bearer');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Rahul Sharma\",\n  \"email\": \"rahul@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "    pm.test('Login successful', function () {",
+                  "        pm.expect(jsonData.access_token).to.be.a('string');",
+                  "        pm.expect(jsonData.token_type).to.eql('bearer');",
+                  "        pm.expect(jsonData.expires_in).to.be.above(0);",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul@example.com\",\n  \"password\": \"Test@1234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('token', jsonData.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', jsonData.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('user_id', jsonData.id);",
+                  "    pm.test('Profile retrieved', function () {",
+                  "        pm.expect(jsonData.email).to.be.a('string');",
+                  "        pm.expect(jsonData.name).to.be.a('string');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"age\": 28,\n  \"gender\": \"male\",\n  \"weight\": 75,\n  \"height\": 175,\n  \"activity_level\": \"moderately_active\",\n  \"goals\": [\"muscle_gain\", \"health_improvement\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me"]
+            }
+          }
+        },
+        {
+          "name": "Create Medical Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"blood_type\": \"B+\",\n  \"allergies\": [\"peanuts\"],\n  \"chronic_conditions\": [],\n  \"medications\": [],\n  \"surgeries\": [],\n  \"family_history\": [\"type_2_diabetes\"],\n  \"dietary_restrictions\": [\"vegetarian\"],\n  \"notes\": \"No known major conditions\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/me/medical-profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", "medical-profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Medical Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/me/medical-profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "me", "medical-profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Upload Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('report_id', jsonData.id);",
+                  "    pm.test('Report uploaded', function () {",
+                  "        pm.expect(jsonData.status).to.eql('uploaded');",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "/path/to/your/lab_report.pdf",
+                  "description": "Lab report PDF or image file"
+                },
+                {
+                  "key": "report_type",
+                  "value": "CBC",
+                  "type": "text",
+                  "description": "One of: CBC, LIPID, LFT, KFT, THYROID, VITAMIN, DIABETES"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/reports/upload",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "upload"]
+            }
+          }
+        },
+        {
+          "name": "List Reports",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reports/",
+              "host": ["{{base_url}}"],
+              "path": ["reports", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "{{report_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Analyze Report",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_id}}/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "{{report_id}}", "analyze"]
+            }
+          }
+        },
+        {
+          "name": "Get Analysis Results",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reports/{{report_id}}/analysis",
+              "host": ["{{base_url}}"],
+              "path": ["reports", "{{report_id}}", "analysis"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Nutrition",
+      "item": [
+        {
+          "name": "Calculate Nutrition",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weight_kg\": 75,\n  \"height_cm\": 175,\n  \"age\": 28,\n  \"gender\": \"male\",\n  \"activity_level\": \"moderate\",\n  \"goal\": \"maintenance\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/nutrition/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["nutrition", "calculate"]
+            }
+          }
+        },
+        {
+          "name": "Calculate from Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/nutrition/calculate",
+              "host": ["{{base_url}}"],
+              "path": ["nutrition", "calculate"]
+            }
+          }
+        },
+        {
+          "name": "Generate Diet Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goal\": \"weight_loss\",\n  \"dietary_restrictions\": [\"vegetarian\"],\n  \"allergies\": [\"peanuts\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/nutrition/generate-diet",
+              "host": ["{{base_url}}"],
+              "path": ["nutrition", "generate-diet"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fitness",
+      "item": [
+        {
+          "name": "Generate Workout Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"goal\": \"muscle_gain\",\n  \"difficulty\": \"intermediate\",\n  \"days_per_week\": 4,\n  \"conditions\": [],\n  \"use_biomarkers\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/fitness/generate-workout",
+              "host": ["{{base_url}}"],
+              "path": ["fitness", "generate-workout"]
+            }
+          }
+        },
+        {
+          "name": "List Workout Plans",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/fitness/workout-plans",
+              "host": ["{{base_url}}"],
+              "path": ["fitness", "workout-plans"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recommendations",
+      "item": [
+        {
+          "name": "Generate Recommendations",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"report_id\": \"{{report_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/recommendations/generate",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "generate"]
+            }
+          }
+        },
+        {
+          "name": "List Recommendations",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/recommendations/",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Latest Recommendation",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/recommendations/latest",
+              "host": ["{{base_url}}"],
+              "path": ["recommendations", "latest"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "item": [
+        {
+          "name": "Log Progress",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-06-15\",\n  \"weight\": 74.5,\n  \"body_fat_pct\": 18.0,\n  \"measurements\": {\n    \"waist\": 82.0,\n    \"chest\": 100.0,\n    \"arms\": 36.0,\n    \"thighs\": 56.0\n  },\n  \"biomarker_snapshot\": {\n    \"hemoglobin\": 14.8,\n    \"vitamin_d\": 28.0\n  },\n  \"notes\": \"Feeling good, energy levels up\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/progress/",
+              "host": ["{{base_url}}"],
+              "path": ["progress", ""]
+            }
+          }
+        },
+        {
+          "name": "Get History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/progress/?limit=50&skip=0",
+              "host": ["{{base_url}}"],
+              "path": ["progress", ""],
+              "query": [
+                { "key": "limit", "value": "50" },
+                { "key": "skip", "value": "0" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "PDF",
+      "item": [
+        {
+          "name": "Download Generated PDF Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/pdf/reports/{{report_id}}/pdf",
+              "host": ["{{base_url}}"],
+              "path": ["pdf", "reports", "{{report_id}}", "pdf"]
+            }
+          }
+        },
+        {
+          "name": "Download Original Report",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/pdf/report/{{report_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["pdf", "report", "{{report_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,48 @@
+# Version control
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+docs/
+*.md
+LICENSE
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node modules (handled per-service)
+node_modules/
+
+# Python cache (handled per-service)
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Docker
+docker-compose*.yml
+.dockerignore
+
+# Uploads (mounted as volume)
+uploads/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+
+# Logs
+*.log
+logs/
