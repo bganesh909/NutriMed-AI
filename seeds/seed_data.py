@@ -22,9 +22,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from motor.motor_asyncio import AsyncIOMotorClient
-from passlib.context import CryptContext
+import bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME", "nutrimed_ai")
@@ -117,7 +119,7 @@ async def seed_users(db) -> dict[str, str]:
         doc = {
             "name": user["name"],
             "email": user["email"],
-            "hashed_password": pwd_context.hash(user["password"]),
+            "hashed_password": hash_password(user["password"]),
             "age": user.get("age"),
             "gender": user.get("gender"),
             "weight": user.get("weight"),

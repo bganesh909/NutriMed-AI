@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date as date_type, datetime, timezone
 from typing import Dict, Optional
 
 from pydantic import BaseModel, Field
@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 class ProgressModel(BaseModel):
     id: Optional[str] = Field(default=None, alias="_id")
     user_id: str
-    date: date = Field(default_factory=lambda: date.today())
+    date: date_type = Field(default_factory=lambda: date_type.today())
     weight: Optional[float] = None
     body_fat_pct: Optional[float] = None
     measurements: Dict[str, float] = Field(default_factory=dict)

@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date as date_type, datetime
 from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -7,7 +7,7 @@ __all__ = ["ProgressLogCreate", "ProgressLogResponse", "ProgressHistoryResponse"
 
 
 class ProgressLogCreate(BaseModel):
-    date: date = Field(default_factory=date.today)
+    date: date_type = Field(default_factory=date_type.today)
     weight: Optional[float] = Field(None, ge=10, le=500)
     body_fat_pct: Optional[float] = Field(None, ge=1, le=70)
     measurements: Dict[str, float] = Field(default_factory=dict)
@@ -18,7 +18,7 @@ class ProgressLogCreate(BaseModel):
 class ProgressLogResponse(BaseModel):
     id: str
     user_id: str
-    date: date
+    date: date_type
     weight: Optional[float] = None
     body_fat_pct: Optional[float] = None
     measurements: Dict[str, float] = {}
