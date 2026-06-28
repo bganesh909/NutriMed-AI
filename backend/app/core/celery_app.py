@@ -4,7 +4,7 @@ from app.core.config import settings
 
 celery_app = Celery(
     "nutrimed_worker",
-    broker=settings.RABBITMQ_URL,
+    broker=settings.CELERY_BROKER_URL or settings.RABBITMQ_URL,
     backend=settings.REDIS_URL,
 )
 

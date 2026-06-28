@@ -109,11 +109,12 @@ async def trigger_analysis(
         },
     )
 
-    # Dispatch Celery task
+    # Dispatch Celery task. process_ocr is the pipeline entry point; it chains
+    # to biomarker extraction and AI analysis.
     try:
-        from app.workers.report_tasks import analyse_report_task
+        from app.workers.ocr_worker import process_ocr
 
-        analyse_report_task.delay(report_id)
+        process_ocr.delay(report_id, doc["file_path"])
     except (ImportError, Exception):
         # Workers module may not be available in dev; revert status
         await db["reports"].update_one(

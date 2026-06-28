@@ -29,7 +29,7 @@ def _get_db():
 
 def _call_llm_sync(prompt: str) -> str:
     url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-    payload = {"model": "llama3", "prompt": prompt, "stream": False}
+    payload = {"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False}
     response = httpx.post(url, json=payload, timeout=LLM_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json().get("response", "")

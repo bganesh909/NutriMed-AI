@@ -127,7 +127,7 @@ class FitnessService:
     async def _call_llm(self, prompt: str) -> list | str:
         url = f"{settings.OLLAMA_BASE_URL}/api/generate"
         payload = {
-            "model": "llama3",
+            "model": settings.OLLAMA_MODEL,
             "prompt": prompt,
             "stream": False,
         }

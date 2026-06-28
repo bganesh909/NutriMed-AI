@@ -32,7 +32,7 @@ def _call_llm_sync(prompt: str) -> str:
     """Synchronous call to Ollama for use inside Celery tasks."""
     url = f"{settings.OLLAMA_BASE_URL}/api/generate"
     payload = {
-        "model": "llama3",
+        "model": settings.OLLAMA_MODEL,
         "prompt": prompt,
         "stream": False,
     }

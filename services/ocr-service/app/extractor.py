@@ -10,24 +10,31 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
-import cv2
 import numpy as np
 import pdfplumber
-from paddleocr import PaddleOCR
-from PIL import Image
 
 from app.schemas import TextBlock
 
 logger = logging.getLogger(__name__)
 
-# Module-level singleton to avoid re-loading models on every call
-_ocr_instance: Optional[PaddleOCR] = None
+# Module-level singleton to avoid re-loading models on every call.
+# PaddleOCR/cv2 are imported lazily so the service can run (digital-PDF path)
+# without the heavy paddlepaddle dependency installed.
+_ocr_instance: Optional[object] = None
 
 
-def _get_ocr() -> PaddleOCR:
-    """Return a cached PaddleOCR instance."""
+def _get_ocr() -> object:
+    """Return a cached PaddleOCR instance (lazily imported)."""
     global _ocr_instance
     if _ocr_instance is None:
+        try:
+            from paddleocr import PaddleOCR
+        except ImportError as exc:  # pragma: no cover - optional dependency
+            raise RuntimeError(
+                "Image/scanned-PDF OCR requires PaddleOCR, which is not installed. "
+                "Install paddleocr + paddlepaddle to enable it, or upload a digital "
+                "(text-based) PDF instead."
+            ) from exc
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
             lang="en",
@@ -54,6 +61,8 @@ def extract_from_image(image_input: str | np.ndarray) -> list[TextBlock]:
     list[TextBlock]
         Text blocks sorted top-to-bottom, left-to-right.
     """
+    import cv2
+
     ocr = _get_ocr()
 
     if isinstance(image_input, str):

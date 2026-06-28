@@ -103,3 +103,6 @@ temp/
 
 # --- Jupyter ---
 .ipynb_checkpoints/
+
+# Backend runtime uploads (encrypted user files)
+backend/uploads/
