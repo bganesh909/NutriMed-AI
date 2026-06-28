@@ -72,22 +72,29 @@ async def download_generated_pdf(
     if diet_plan:
         diet_plan.pop("_id", None)
 
-    # Fetch latest workout plan
-    workout_plan = await db["workout_plans"].find_one(
-        {"user_id": current_user["id"]},
-        sort=[("created_at", -1)],
-    )
-    if workout_plan:
-        workout_plan.pop("_id", None)
+    # Fetch the most recent workout plan that actually has exercises (skip
+    # placeholder/failed plans, e.g. a report-derived plan whose LLM step timed out).
+    workout_plan = None
+    async for wp in db["workout_plans"].find(
+        {"user_id": current_user["id"]}
+    ).sort("created_at", -1):
+        days = wp.get("plan") or wp.get("days") or []
+        if isinstance(days, list) and any(
+            isinstance(d, dict) and d.get("exercises") for d in days
+        ):
+            wp.pop("_id", None)
+            workout_plan = wp
+            break
 
-    # Extract supplements from latest recommendation
+    # Extract supplements from the most recent recommendation that has any.
     supplements = None
-    rec_doc = await db["recommendations"].find_one(
-        {"user_id": current_user["id"]},
-        sort=[("created_at", -1)],
-    )
-    if rec_doc:
-        supplements = rec_doc.get("supplements", rec_doc.get("supplement_suggestions"))
+    async for rec_doc in db["recommendations"].find(
+        {"user_id": current_user["id"]}
+    ).sort("created_at", -1):
+        candidate = rec_doc.get("supplements") or rec_doc.get("supplement_suggestions")
+        if isinstance(candidate, list) and candidate:
+            supplements = candidate
+            break
 
     # Generate PDF
     pdf_service = PDFService()
