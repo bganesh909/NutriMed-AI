@@ -29,8 +29,8 @@ class ReportAnalysisResponse(BaseModel):
     report_id: str
     status: str
     biomarkers: Optional[Dict[str, Any]] = None
-    deficiencies: List[str] = []
-    risk_factors: List[str] = []
-    dietary_suggestions: List[str] = []
-    supplement_suggestions: List[str] = []
-    warnings: List[str] = []
+    deficiencies: List[Any] = []
+    risk_factors: List[Any] = []
+    dietary_suggestions: List[Any] = []
+    supplement_suggestions: List[Any] = []
+    warnings: List[Any] = []

@@ -6,6 +6,10 @@ services:
     ports: ["8000:8000"]
     depends_on: [mongo, redis, rabbitmq]
     env_file: .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OCR_SERVICE_URL: http://ocr-service:8001
+      CELERY_BROKER_URL: redis://redis:6379/1
     volumes: ["./backend:/app", "./uploads:/app/uploads"]
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     restart: unless-stopped
@@ -22,6 +26,10 @@ services:
     build: ./backend
     depends_on: [mongo, redis, rabbitmq]
     env_file: .env
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OCR_SERVICE_URL: http://ocr-service:8001
+      CELERY_BROKER_URL: redis://redis:6379/1
     volumes: ["./backend:/app", "./uploads:/app/uploads"]
     command: celery -A app.core.celery_app worker -l info -Q reports,ai,notifications -c 4
     restart: unless-stopped
@@ -32,6 +40,8 @@ services:
     build: ./backend
     depends_on: [redis, rabbitmq]
     env_file: .env
+    environment:
+      CELERY_BROKER_URL: redis://redis:6379/1
     volumes: ["./backend:/app"]
     command: celery -A app.core.celery_app beat -l info
     restart: unless-stopped

@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     # RabbitMQ
     RABBITMQ_URL: str = "amqp://guest:guest@localhost:5672//"
 
+    # Celery broker. Defaults to Redis (already running locally and avoids the
+    # RabbitMQ 4.x transient-queue restriction). Override via env for other brokers.
+    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
+
     # JWT
     JWT_SECRET: str = "change-me-in-production-use-a-strong-secret"
     JWT_ALGORITHM: str = "HS256"
@@ -24,6 +28,10 @@ class Settings(BaseSettings):
 
     # Ollama (local LLM)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
+    OLLAMA_MODEL: str = "mistral:7b"
+
+    # OCR microservice
+    OCR_SERVICE_URL: str = "http://localhost:8001"
 
     # AES encryption for reports
     AES_KEY: str = "change-me-32-byte-base64-key-here"

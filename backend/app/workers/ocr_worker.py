@@ -17,7 +17,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-OCR_SERVICE_URL = "http://ocr-service:8001/ocr/extract"
+OCR_SERVICE_URL = f"{settings.OCR_SERVICE_URL}/ocr/extract"
 OCR_TIMEOUT_SECONDS = 120.0
 
 
@@ -47,14 +47,18 @@ def process_ocr(self, report_id: str, file_path: str):
     )
 
     try:
-        # Read the file and send to the OCR service
+        # Uploaded files are stored AES-encrypted on disk; decrypt before OCR.
+        from app.core.security import decrypt_data
+
         with open(file_path, "rb") as f:
-            filename = file_path.rsplit("/", 1)[-1]
-            response = httpx.post(
-                OCR_SERVICE_URL,
-                files={"file": (filename, f)},
-                timeout=OCR_TIMEOUT_SECONDS,
-            )
+            file_bytes = decrypt_data(f.read())
+
+        filename = file_path.rsplit("/", 1)[-1]
+        response = httpx.post(
+            OCR_SERVICE_URL,
+            files={"file": (filename, file_bytes)},
+            timeout=OCR_TIMEOUT_SECONDS,
+        )
         response.raise_for_status()
         ocr_result = response.json()
 

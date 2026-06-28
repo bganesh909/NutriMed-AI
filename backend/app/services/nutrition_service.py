@@ -236,7 +236,7 @@ class NutritionService:
         """Call Ollama local LLM and attempt to parse JSON response."""
         url = f"{settings.OLLAMA_BASE_URL}/api/generate"
         payload = {
-            "model": "llama3",
+            "model": settings.OLLAMA_MODEL,
             "prompt": prompt,
             "stream": False,
         }

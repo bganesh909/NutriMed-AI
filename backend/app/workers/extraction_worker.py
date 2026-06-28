@@ -75,17 +75,40 @@ def _extract_markers_from_text(raw_text: str) -> dict[str, float]:
     return markers
 
 
+def _markers_from_ocr_result(ocr_result: dict) -> dict[str, float]:
+    """
+    Reuse the structured biomarkers already parsed by the OCR service, if present.
+    The OCR service returns {"ocr": {...}, "biomarkers": {"biomarkers": [ {name, value, ...} ]}}.
+    Returns a dict of marker_name -> numeric value.
+    """
+    markers: dict[str, float] = {}
+    bio = ocr_result.get("biomarkers")
+    items = bio.get("biomarkers") if isinstance(bio, dict) else None
+    if isinstance(items, list):
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            name = item.get("name")
+            value = item.get("value")
+            if name and isinstance(value, (int, float)):
+                markers[str(name)] = float(value)
+    return markers
+
+
 def _flatten_ocr_text(ocr_result: dict) -> str:
     """
     Combine all text blocks from the OCR result into a single string.
-    Supports both a flat 'text' field and a list of 'text_blocks'.
+    Supports a flat 'text'/'raw_text' field, a list of 'text_blocks', and the
+    OCR service's nested payload under an 'ocr' key.
     """
     parts: list[str] = []
+    source = ocr_result.get("ocr") if isinstance(ocr_result.get("ocr"), dict) else ocr_result
 
-    if "text" in ocr_result and isinstance(ocr_result["text"], str):
-        parts.append(ocr_result["text"])
+    for key in ("text", "raw_text"):
+        if isinstance(source.get(key), str):
+            parts.append(source[key])
 
-    for block in ocr_result.get("text_blocks", []):
+    for block in source.get("text_blocks", []):
         if isinstance(block, str):
             parts.append(block)
         elif isinstance(block, dict):
@@ -118,8 +141,12 @@ def extract_biomarkers(self, report_id: str):
             raise ValueError(f"No OCR result found for report {report_id}")
 
         user_id = report["user_id"]
-        raw_text = _flatten_ocr_text(ocr_result)
-        markers = _extract_markers_from_text(raw_text)
+        # Prefer biomarkers already parsed by the OCR service; fall back to
+        # regex parsing of the raw OCR text.
+        markers = _markers_from_ocr_result(ocr_result)
+        if not markers:
+            raw_text = _flatten_ocr_text(ocr_result)
+            markers = _extract_markers_from_text(raw_text)
 
         if not markers:
             logger.warning("No biomarkers extracted from report %s", report_id)

@@ -32,9 +32,11 @@ class WorkoutPlanRequest(BaseModel):
 class WorkoutPlanResponse(BaseModel):
     id: str
     user_id: str
-    plan_type: str
-    difficulty: str
-    goal: str
+    # Tolerant defaults: report-derived plans (from the recommendation worker)
+    # don't carry these fields, while directly-generated plans do.
+    plan_type: str = "custom"
+    difficulty: str = "intermediate"
+    goal: str = "general_fitness"
     days: List[WorkoutDaySchema] = []
     adaptations: List[str] = []
     duration_weeks: int = 4

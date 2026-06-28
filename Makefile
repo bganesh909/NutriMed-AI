@@ -1,4 +1,4 @@
-.PHONY: help up down build logs test seed clean models
+.PHONY: help up down build logs test seed clean models dev-local stop-local
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -47,6 +47,15 @@ dev-frontend: ## Run frontend in development mode
 
 dev: ## Run both backend and frontend in development
 	$(MAKE) dev-backend & $(MAKE) dev-frontend
+
+dev-local: ## Start the full stack locally without Docker (Ollama, OCR, API, Celery, frontend)
+	./scripts/dev-local.sh
+
+stop-local: ## Stop services started by dev-local (leaves Mongo/Redis/Ollama running)
+	-pkill -f "uvicorn app.main:app" 2>/dev/null
+	-pkill -f "celery -A app.core.celery_app" 2>/dev/null
+	-pkill -f "next dev" 2>/dev/null
+	@echo "Stopped backend, OCR, celery, and frontend."
 
 status: ## Show status of all services
 	docker compose ps

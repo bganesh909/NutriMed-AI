@@ -69,6 +69,12 @@ async def list_workout_plans(
     plans = []
     async for doc in cursor:
         doc["id"] = str(doc.pop("_id"))
+        # Stored docs keep the day-by-day structure under "plan"; the response
+        # model exposes it as "days". Guard against non-list values (e.g. a
+        # report-derived plan may store {"error": ...} if its LLM step failed).
+        if "days" not in doc:
+            plan = doc.get("plan")
+            doc["days"] = plan if isinstance(plan, list) else []
         plans.append(WorkoutPlanResponse(**doc))
     return plans
 
@@ -83,4 +89,7 @@ async def get_workout_plan(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout plan not found")
     doc["id"] = str(doc.pop("_id"))
+    if "days" not in doc:
+        plan = doc.get("plan")
+        doc["days"] = plan if isinstance(plan, list) else []
     return WorkoutPlanResponse(**doc)
