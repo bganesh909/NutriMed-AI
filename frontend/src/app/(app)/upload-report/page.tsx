@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -22,29 +15,30 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { FileUpload } from "@/components/file-upload";
-import { useUploadReport, useReports } from "@/hooks/use-reports";
+import { ConfirmDialog } from "@/components/confirm-dialog";
+import { OptionSelect } from "@/components/option-select";
+import { useDeleteReport, useUploadReport, useReports } from "@/hooks/use-reports";
+import { apiErrorMessage } from "@/lib/api-error";
+import { formatApiDate } from "@/lib/dates";
+import { reportStatusMeta } from "@/lib/report-status";
+import type { Report } from "@/types";
 import { toast } from "sonner";
-import { format } from "date-fns";
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
-const reportTypes = [
-  "Complete Blood Count (CBC)",
-  "Lipid Panel",
-  "Metabolic Panel",
-  "Thyroid Panel",
-  "Vitamin Panel",
-  "Liver Function",
-  "Kidney Function",
-  "General Health Checkup",
-  "Other",
+// `value` must match the backend ReportType enum (app/models/report.py).
+const reportTypes: { value: string; label: string }[] = [
+  { value: "CBC", label: "Complete Blood Count (CBC)" },
+  { value: "LIPID", label: "Lipid Panel" },
+  { value: "DIABETES", label: "Metabolic Panel" },
+  { value: "THYROID", label: "Thyroid Panel" },
+  { value: "VITAMIN", label: "Vitamin Panel" },
+  { value: "LFT", label: "Liver Function" },
+  { value: "KFT", label: "Kidney Function" },
+  { value: "GENERAL", label: "General Health Checkup" },
 ];
 
-const statusBadgeClass: Record<string, string> = {
-  uploaded: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-  processing: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  analyzed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  error: "bg-red-500/10 text-red-400 border-red-500/20",
-};
+const reportTypeLabel = (value: string) =>
+  reportTypes.find((t) => t.value === value)?.label ?? value;
 
 export default function UploadReportPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -54,6 +48,19 @@ export default function UploadReportPage() {
 
   const uploadMutation = useUploadReport();
   const { data: reports, isLoading: reportsLoading } = useReports();
+  const deleteMutation = useDeleteReport();
+  const [toDelete, setToDelete] = useState<Report | null>(null);
+
+  const confirmDelete = async () => {
+    if (!toDelete) return;
+    try {
+      await deleteMutation.mutateAsync(toDelete.id);
+      toast.success("Report deleted.");
+      setToDelete(null);
+    } catch (error) {
+      toast.error(apiErrorMessage(error, "Could not delete the report."));
+    }
+  };
 
   const handleUpload = async () => {
     if (!selectedFile || !reportType) {
@@ -87,10 +94,10 @@ export default function UploadReportPage() {
         setUploadProgress(0);
         router.push(`/report-analysis/${result.id}`);
       }, 1000);
-    } catch {
+    } catch (error) {
       clearInterval(interval);
       setUploadProgress(0);
-      toast.error("Failed to upload report. Please try again.");
+      toast.error(apiErrorMessage(error, "Failed to upload report. Please try again."));
     }
   };
 
@@ -115,25 +122,16 @@ export default function UploadReportPage() {
           />
 
           <div className="space-y-2">
-            <label className="text-sm font-medium text-slate-300">
+            <label htmlFor="report-type" className="text-sm font-medium text-slate-300">
               Report Type
             </label>
-            <Select value={reportType} onValueChange={(v) => v && setReportType(v)}>
-              <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200">
-                <SelectValue placeholder="Select report type" />
-              </SelectTrigger>
-              <SelectContent className="bg-slate-800 border-slate-700">
-                {reportTypes.map((type) => (
-                  <SelectItem
-                    key={type}
-                    value={type}
-                    className="text-slate-200 focus:bg-slate-700 focus:text-slate-100"
-                  >
-                    {type}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <OptionSelect
+              id="report-type"
+              value={reportType}
+              onChange={setReportType}
+              placeholder="Select report type"
+              options={reportTypes}
+            />
           </div>
 
           {uploadProgress > 0 && (
@@ -182,43 +180,50 @@ export default function UploadReportPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {reports.map((report) => (
-                  <TableRow
-                    key={report.id}
-                    className="border-slate-800 hover:bg-slate-800/50"
-                  >
-                    <TableCell className="font-medium text-slate-200">
-                      {report.file_name}
-                    </TableCell>
-                    <TableCell className="text-slate-300">
-                      {report.report_type}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={statusBadgeClass[report.status]}
-                      >
-                        {report.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-slate-400">
-                      {format(new Date(report.uploaded_at), "MMM dd, yyyy")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-blue-400 hover:text-blue-300"
-                        onClick={() =>
-                          router.push(`/report-analysis/${report.id}`)
-                        }
-                        disabled={report.status !== "analyzed"}
-                      >
-                        {report.status === "analyzed" ? "View" : "Pending"}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {reports.map((report) => {
+                  const meta = reportStatusMeta(report.status);
+                  return (
+                    <TableRow
+                      key={report.id}
+                      className="border-slate-800 hover:bg-slate-800/50"
+                    >
+                      <TableCell className="font-medium text-slate-200 max-w-[16rem] truncate">
+                        {report.original_filename}
+                      </TableCell>
+                      <TableCell className="text-slate-300">
+                        {reportTypeLabel(report.report_type)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={meta.badgeClass}>
+                          {meta.inFlight && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
+                          {meta.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-400">
+                        {formatApiDate(report.uploaded_at, "MMM dd, yyyy")}
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-blue-400 hover:text-blue-300"
+                          onClick={() => router.push(`/report-analysis/${report.id}`)}
+                        >
+                          {report.status === "completed" ? "View" : "Open"}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="ml-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10"
+                          onClick={() => setToDelete(report)}
+                          aria-label={`Delete ${report.original_filename}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
@@ -228,6 +233,22 @@ export default function UploadReportPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={!!toDelete}
+        onOpenChange={(open) => !open && setToDelete(null)}
+        title="Delete this report?"
+        description={
+          <>
+            <span className="font-medium text-slate-200">{toDelete?.original_filename}</span> and its biomarkers,
+            analysis, suggestions and any plans built from it will be permanently deleted.
+          </>
+        }
+        confirmLabel="Delete report"
+        destructive
+        pending={deleteMutation.isPending}
+        onConfirm={confirmDelete}
+      />
     </div>
   );
 }

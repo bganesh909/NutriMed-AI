@@ -1,5 +1,3 @@
-from typing import Optional
-
 from app.repositories.base import BaseRepository
 
 
@@ -9,12 +7,10 @@ class BiomarkerRepository(BaseRepository):
     async def create(self, biomarker_doc: dict) -> dict:
         return await self.insert_one(biomarker_doc)
 
-    async def get_by_report(self, report_id: str) -> Optional[dict]:
+    async def get_by_report(self, report_id: str) -> dict | None:
         return await self.find_one({"report_id": report_id})
 
-    async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 50
-    ) -> list[dict]:
+    async def get_by_user(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:
         return await self.find_many(
             {"user_id": user_id},
             sort=[("created_at", -1)],
@@ -22,7 +18,7 @@ class BiomarkerRepository(BaseRepository):
             limit=limit,
         )
 
-    async def get_latest_by_user(self, user_id: str) -> Optional[dict]:
+    async def get_latest_by_user(self, user_id: str) -> dict | None:
         results = await self.find_many(
             {"user_id": user_id},
             sort=[("created_at", -1)],

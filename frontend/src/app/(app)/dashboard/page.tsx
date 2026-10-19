@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Activity, Droplets, Sun, ShieldAlert, Upload, UtensilsCrossed, Dumbbell } from "lucide-react";
+import { Activity, Droplets, Sun, ShieldAlert, Sparkles, Upload, UtensilsCrossed, Dumbbell } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,31 +16,67 @@ import { Badge } from "@/components/ui/badge";
 import { StatsCard } from "@/components/stats-card";
 import { BiomarkerChart } from "@/components/charts/biomarker-chart";
 import { useAuthStore } from "@/stores/auth-store";
-import { useReports } from "@/hooks/use-reports";
+import { useReports, useReportAnalysis } from "@/hooks/use-reports";
 import { StatsCardSkeleton, ChartSkeleton, TableSkeleton } from "@/components/loading-skeleton";
-import { format } from "date-fns";
-import type { Biomarker } from "@/types";
+import { toBiomarkers, markerLabel } from "@/lib/biomarkers";
+import { formatApiDate } from "@/lib/dates";
+import { reportStatusMeta } from "@/lib/report-status";
 
-const mockBiomarkers: Biomarker[] = [
-  { id: "1", report_id: "1", name: "Hemoglobin", value: 14.2, unit: "g/dL", reference_min: 12, reference_max: 17, status: "Normal", category: "Blood" },
-  { id: "2", report_id: "1", name: "Vitamin D", value: 18, unit: "ng/mL", reference_min: 30, reference_max: 100, status: "Low", category: "Vitamins" },
-  { id: "3", report_id: "1", name: "Blood Sugar", value: 110, unit: "mg/dL", reference_min: 70, reference_max: 100, status: "High", category: "Metabolic" },
-  { id: "4", report_id: "1", name: "Cholesterol", value: 210, unit: "mg/dL", reference_min: 0, reference_max: 200, status: "High", category: "Lipids" },
-  { id: "5", report_id: "1", name: "Iron", value: 80, unit: "ug/dL", reference_min: 60, reference_max: 170, status: "Normal", category: "Minerals" },
-  { id: "6", report_id: "1", name: "B12", value: 450, unit: "pg/mL", reference_min: 200, reference_max: 900, status: "Normal", category: "Vitamins" },
-];
-
-const statusBadgeClass: Record<string, string> = {
-  uploaded: "bg-slate-500/10 text-slate-400 border-slate-500/20",
-  processing: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-  analyzed: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  error: "bg-red-500/10 text-red-400 border-red-500/20",
-};
 
 export default function DashboardPage() {
   const { user } = useAuthStore();
   const { data: reports, isLoading } = useReports();
   const router = useRouter();
+
+  // Dashboard figures come from the most recent fully-analysed report.
+  const latestAnalysed = reports?.find((r) => r.status === "completed");
+  const { data: analysis, isLoading: analysisLoading } = useReportAnalysis(
+    latestAnalysed?.id ?? ""
+  );
+
+  const biomarkers = toBiomarkers(analysis?.biomarkers);
+  const details = analysis?.biomarkers ?? null;
+  const abnormal = biomarkers.filter((b) => b.status !== "Normal");
+  const loadingStats = isLoading || analysisLoading;
+
+  const bmi =
+    user?.weight && user?.height
+      ? (user.weight / (user.height / 100) ** 2).toFixed(1)
+      : "--";
+
+  /** Format one marker for a stat tile, or a placeholder when absent. */
+  const stat = (key: string) => {
+    const d = details?.[key];
+    if (!d || typeof d.value !== "number") {
+      return { value: "--", subtitle: "No report data", color: "text-slate-500" };
+    }
+    const unit = d.unit && d.unit !== "unknown" ? ` ${d.unit}` : "";
+    const subtitle =
+      d.status === "normal"
+        ? "Normal range"
+        : d.status === "low"
+          ? "Below range"
+          : d.status === "high"
+            ? "Above range"
+            : "Not classified";
+    const color =
+      d.status === "normal"
+        ? "text-emerald-500"
+        : d.status === "unknown"
+          ? "text-slate-500"
+          : "text-amber-500";
+    return { value: `${d.value}${unit}`, subtitle, color };
+  };
+
+  const hb = stat("hemoglobin");
+  const vitD = stat("vitamin_d");
+  const riskLabel = !latestAnalysed
+    ? "--"
+    : abnormal.length === 0
+      ? "Low"
+      : abnormal.length <= 2
+        ? "Moderate"
+        : "High";
 
   return (
     <div className="space-y-6">
@@ -54,7 +90,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {isLoading ? (
+        {loadingStats ? (
           <>
             <StatsCardSkeleton />
             <StatsCardSkeleton />
@@ -66,30 +102,36 @@ export default function DashboardPage() {
             <StatsCard
               icon={Activity}
               label="BMI"
-              value={user ? (user.weight / ((user.height / 100) ** 2)).toFixed(1) : "--"}
+              value={bmi}
               subtitle="Body Mass Index"
               iconColor="text-blue-500"
             />
             <StatsCard
               icon={Droplets}
-              label="Hemoglobin"
-              value="14.2 g/dL"
-              subtitle="Normal range"
-              iconColor="text-emerald-500"
+              label={markerLabel("hemoglobin")}
+              value={hb.value}
+              subtitle={hb.subtitle}
+              iconColor={hb.color}
             />
             <StatsCard
               icon={Sun}
-              label="Vitamin D"
-              value="18 ng/mL"
-              subtitle="Below optimal"
-              iconColor="text-amber-500"
+              label={markerLabel("vitamin_d")}
+              value={vitD.value}
+              subtitle={vitD.subtitle}
+              iconColor={vitD.color}
             />
             <StatsCard
               icon={ShieldAlert}
               label="Risk Score"
-              value="Low"
-              subtitle="Based on latest report"
-              iconColor="text-emerald-500"
+              value={riskLabel}
+              subtitle={
+                latestAnalysed
+                  ? `${abnormal.length} marker(s) out of range`
+                  : "No analysed report yet"
+              }
+              iconColor={
+                abnormal.length === 0 ? "text-emerald-500" : "text-amber-500"
+              }
             />
           </>
         )}
@@ -101,10 +143,14 @@ export default function DashboardPage() {
             <CardTitle className="text-slate-200">Biomarker Overview</CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {loadingStats ? (
               <ChartSkeleton />
+            ) : biomarkers.length === 0 ? (
+              <p className="text-sm text-slate-400 py-8 text-center">
+                Upload and analyse a report to see your biomarkers here.
+              </p>
             ) : (
-              <BiomarkerChart biomarkers={mockBiomarkers} />
+              <BiomarkerChart biomarkers={biomarkers} />
             )}
           </CardContent>
         </Card>
@@ -120,6 +166,14 @@ export default function DashboardPage() {
             >
               <Upload className="h-4 w-4" />
               Upload New Report
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-slate-100"
+              onClick={() => router.push("/suggestions")}
+            >
+              <Sparkles className="h-4 w-4" />
+              Get Suggestions
             </Button>
             <Button
               variant="outline"
@@ -166,7 +220,7 @@ export default function DashboardPage() {
                     className="border-slate-800 hover:bg-slate-800/50"
                   >
                     <TableCell className="font-medium text-slate-200">
-                      {report.file_name}
+                      {report.original_filename}
                     </TableCell>
                     <TableCell className="text-slate-300">
                       {report.report_type}
@@ -174,13 +228,13 @@ export default function DashboardPage() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={statusBadgeClass[report.status]}
+                        className={reportStatusMeta(report.status).badgeClass}
                       >
-                        {report.status}
+                        {reportStatusMeta(report.status).label}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-400">
-                      {format(new Date(report.uploaded_at), "MMM dd, yyyy")}
+                      {formatApiDate(report.uploaded_at, "MMM dd, yyyy")}
                     </TableCell>
                     <TableCell className="text-right">
                       <Button

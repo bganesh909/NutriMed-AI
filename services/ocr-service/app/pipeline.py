@@ -11,14 +11,12 @@ import logging
 import re
 import tempfile
 from pathlib import Path
-from typing import Optional
 
 import cv2
-import numpy as np
 
 from app.biomarker_engine import (
     PARSER_REGISTRY,
-    BaseReportParser,
+    evaluate_status_for,
     run_all_parsers,
 )
 from app.extractor import extract_from_image, extract_from_pdf
@@ -60,31 +58,49 @@ def _detect_file_type(filename: str) -> str:
 
 _REPORT_TYPE_KEYWORDS: dict[str, list[str]] = {
     "cbc": [
-        r"complete\s*blood\s*count", r"cbc", r"haemogram", r"hemogram",
-        r"blood\s*count", r"total\s*leucocyte",
+        r"complete\s*blood\s*count",
+        r"cbc",
+        r"haemogram",
+        r"hemogram",
+        r"blood\s*count",
+        r"total\s*leucocyte",
     ],
     "lipid_profile": [
-        r"lipid\s*profile", r"lipid\s*panel", r"cholesterol\s*panel",
+        r"lipid\s*profile",
+        r"lipid\s*panel",
+        r"cholesterol\s*panel",
         r"lipid\s*test",
     ],
     "lft": [
-        r"liver\s*function", r"lft", r"hepatic\s*panel",
+        r"liver\s*function",
+        r"lft",
+        r"hepatic\s*panel",
         r"hepatic\s*function",
     ],
     "kft": [
-        r"kidney\s*function", r"kft", r"renal\s*function", r"rft",
+        r"kidney\s*function",
+        r"kft",
+        r"renal\s*function",
+        r"rft",
         r"renal\s*panel",
     ],
     "thyroid": [
-        r"thyroid\s*function", r"thyroid\s*profile", r"thyroid\s*panel",
+        r"thyroid\s*function",
+        r"thyroid\s*profile",
+        r"thyroid\s*panel",
         r"tft",
     ],
     "vitamin": [
-        r"vitamin\s*(?:d|b\s*12)", r"vit\s*(?:d|b\s*12)",
-        r"iron\s*(?:study|profile)", r"ferritin",
+        r"vitamin\s*(?:d|b\s*12)",
+        r"vit\s*(?:d|b\s*12)",
+        r"iron\s*(?:study|profile)",
+        r"ferritin",
     ],
     "diabetes": [
-        r"diabet", r"hba1c", r"glyc(?:osyl|at)ed", r"glucose\s*(?:fasting|random|pp)",
+        r"diabet",
+        r"hba1c",
+        r"glyc(?:osyl|at)ed",
+        r"glucose\s*(?:fasting|random|pp)",
         r"blood\s*sugar",
     ],
 }
@@ -158,7 +174,7 @@ _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
 }
 
 
-def _validate_biomarker(bio: ParsedBiomarker) -> tuple[bool, Optional[str]]:
+def _validate_biomarker(bio: ParsedBiomarker) -> tuple[bool, str | None]:
     """Check if a parsed biomarker value is within plausible range."""
     if bio.value is None:
         return True, None  # Can't validate without a value
@@ -169,10 +185,7 @@ def _validate_biomarker(bio: ParsedBiomarker) -> tuple[bool, Optional[str]]:
 
     low, high = bounds
     if bio.value < low or bio.value > high:
-        return False, (
-            f"{bio.canonical_name} value {bio.value} outside plausible range "
-            f"[{low}, {high}]"
-        )
+        return False, (f"{bio.canonical_name} value {bio.value} outside plausible range [{low}, {high}]")
     return True, None
 
 
@@ -180,9 +193,10 @@ def _validate_biomarker(bio: ParsedBiomarker) -> tuple[bool, Optional[str]]:
 # Pipeline
 # ---------------------------------------------------------------------------
 
+
 def run_pipeline_from_file(
     file_path: str,
-    filename: Optional[str] = None,
+    filename: str | None = None,
 ) -> PipelineResponse:
     """Run the full OCR + biomarker extraction pipeline on a file.
 
@@ -207,9 +221,7 @@ def run_pipeline_from_file(
             header = f.read(8)
         if header[:4] == b"%PDF":
             file_type = "pdf"
-        elif header[:3] == b"\xff\xd8\xff":  # JPEG
-            file_type = "image"
-        elif header[:8] == b"\x89PNG\r\n\x1a\n":  # PNG
+        elif header[:3] == b"\xff\xd8\xff" or header[:8] == b"\x89PNG\r\n\x1a\n":  # JPEG
             file_type = "image"
         else:
             file_type = "image"  # Default to image
@@ -260,7 +272,7 @@ def run_pipeline_from_file(
 
 def run_pipeline_from_base64(
     image_base64: str,
-    filename: Optional[str] = None,
+    filename: str | None = None,
 ) -> PipelineResponse:
     """Run the pipeline from a base64-encoded image."""
     # Decode base64 to bytes
@@ -296,6 +308,7 @@ def run_pipeline_from_base64(
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _extract_biomarkers(
     text: str,
     report_type: ReportType,
@@ -309,10 +322,6 @@ def _extract_biomarkers(
         parser = PARSER_REGISTRY.get(report_type.value)
         if parser:
             parsed = parser.parse(text)
-            # Also evaluate status
-            for bio in parsed:
-                status = parser.evaluate_status(bio)
-                bio._status = status  # type: ignore[attr-defined]
 
     # If specific parser found nothing, run all parsers
     if not parsed:
@@ -327,6 +336,13 @@ def _extract_biomarkers(
             parsed.append(gr)
             seen_names.add(gr.canonical_name)
 
+    # Evaluate status for every biomarker, not just those the report-type parser
+    # produced. Without this, markers picked up by the fallback parsers fall
+    # through to the "normal" default below and abnormal results are hidden.
+    for bio in parsed:
+        if getattr(bio, "_status", None) is None:
+            bio._status = evaluate_status_for(bio)  # type: ignore[attr-defined]
+
     # Validate and convert
     biomarkers: list[ExtractedBiomarker] = []
     for bio in parsed:
@@ -334,18 +350,20 @@ def _extract_biomarkers(
         if not valid and warning:
             warnings.append(warning)
 
-        status = getattr(bio, "_status", "normal")
+        status = getattr(bio, "_status", None) or "unknown"
         if not valid:
             status = "suspect"
 
-        biomarkers.append(ExtractedBiomarker(
-            name=bio.canonical_name,
-            value=bio.value,
-            value_raw=bio.value_raw,
-            unit=bio.unit,
-            reference_range=bio.reference_range,
-            status=status,
-        ))
+        biomarkers.append(
+            ExtractedBiomarker(
+                name=bio.canonical_name,
+                value=bio.value,
+                value_raw=bio.value_raw,
+                unit=bio.unit,
+                reference_range=bio.reference_range,
+                status=status,
+            )
+        )
 
     return biomarkers, warnings
 

@@ -63,11 +63,11 @@ class AuthService:
     async def refresh_token(self, refresh_token: str) -> dict:
         try:
             payload = verify_access_token(refresh_token)
-        except Exception:
+        except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Invalid or expired refresh token",
-            )
+            ) from exc
 
         if payload.get("type") != "refresh":
             raise HTTPException(

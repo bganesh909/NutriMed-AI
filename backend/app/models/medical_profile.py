@@ -1,18 +1,17 @@
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
 
 class MedicalProfileModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
-    conditions: List[str] = Field(default_factory=list)
-    allergies: List[str] = Field(default_factory=list)
-    injuries: List[str] = Field(default_factory=list)
-    medications: List[str] = Field(default_factory=list)
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    conditions: list[str] = Field(default_factory=list)
+    allergies: list[str] = Field(default_factory=list)
+    injuries: list[str] = Field(default_factory=list)
+    medications: list[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

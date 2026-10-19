@@ -26,12 +26,17 @@ celery_app.conf.update(
         "tasks.analyze_biomarkers": {"queue": "ai"},
         "tasks.generate_recommendations": {"queue": "ai"},
         "tasks.generate_pdf": {"queue": "reports"},
+        # Full plans, built only when a user asks for one.
+        "tasks.generate_diet_plan_on_request": {"queue": "ai"},
+        "tasks.generate_workout_plan_on_request": {"queue": "ai"},
     },
     # Hard time limit kills the worker process; soft limit raises SoftTimeLimitExceeded.
     task_time_limit=600,
     task_soft_time_limit=540,
 )
 
-celery_app.autodiscover_tasks([
-    "app.workers",
-])
+celery_app.autodiscover_tasks(
+    [
+        "app.workers",
+    ]
+)

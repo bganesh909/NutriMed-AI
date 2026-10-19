@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import logging
 import math
-from typing import Optional
 
 import cv2
 import numpy as np
@@ -83,6 +82,7 @@ def preprocess(
 # Individual pipeline stages
 # ---------------------------------------------------------------------------
 
+
 def to_grayscale(image: np.ndarray) -> np.ndarray:
     """Convert an image to grayscale if it is not already."""
     if len(image.shape) == 3 and image.shape[2] == 3:
@@ -121,8 +121,12 @@ def deskew(image: np.ndarray, max_angle: float = 15.0) -> np.ndarray:
     edges = cv2.Canny(image, 50, 200, apertureSize=3)
 
     lines = cv2.HoughLinesP(
-        edges, rho=1, theta=np.pi / 180, threshold=100,
-        minLineLength=image.shape[1] // 4, maxLineGap=20,
+        edges,
+        rho=1,
+        theta=np.pi / 180,
+        threshold=100,
+        minLineLength=image.shape[1] // 4,
+        maxLineGap=20,
     )
 
     if lines is None:
@@ -152,7 +156,9 @@ def deskew(image: np.ndarray, max_angle: float = 15.0) -> np.ndarray:
     center = (w // 2, h // 2)
     rotation_matrix = cv2.getRotationMatrix2D(center, median_angle, 1.0)
     rotated = cv2.warpAffine(
-        image, rotation_matrix, (w, h),
+        image,
+        rotation_matrix,
+        (w, h),
         flags=cv2.INTER_CUBIC,
         borderMode=cv2.BORDER_REPLICATE,
     )

@@ -227,7 +227,11 @@ JWT_ALGORITHM=HS256
 JWT_EXPIRY_MINUTES=30
 
 # AES -- generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
+# Keep it stable: uploaded reports are encrypted with it, and changing it makes
+# existing uploads unreadable.
 AES_KEY=GENERATE_A_STRONG_AES_KEY_HERE
+# With DEBUG=false the API refuses to start if JWT_SECRET or AES_KEY is a
+# placeholder, shorter than 32 characters, or the two are the same value.
 
 # Ollama
 OLLAMA_BASE_URL=http://ollama:11434
@@ -515,7 +519,7 @@ upstream api_backend {
 ## 8. Deployment Checklist
 
 - [ ] Set strong passwords for all services in `.env.production`
-- [ ] Generate unique JWT_SECRET and AES_KEY
+- [ ] Generate unique JWT_SECRET and AES_KEY (with DEBUG=false the API will not start on placeholders)
 - [ ] Configure SSL certificate
 - [ ] Set up automated backups
 - [ ] Configure firewall (only expose ports 80 and 443)

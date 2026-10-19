@@ -37,9 +37,7 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
         self.max_requests = max_requests
         self.window_seconds = window_seconds
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         # Skip rate limiting for exempt paths
         if request.url.path in _EXEMPT_PATHS:
             return await call_next(request)
@@ -103,7 +101,8 @@ class RateLimitingMiddleware(BaseHTTPMiddleware):
                 if user_id:
                     return f"user:{user_id}"
             except Exception:
-                pass
+                # Never let rate limit bookkeeping break the request it is observing.
+                logger.debug("Suppressed rate limit bookkeeping error", exc_info=True)
 
         # Fall back to IP
         client_ip = request.client.host if request.client else "unknown"

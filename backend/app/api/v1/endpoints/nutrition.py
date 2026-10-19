@@ -1,27 +1,25 @@
-from typing import Optional
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
 from app.core.dependencies import get_current_user, get_db
 from app.repositories.diet_plan_repository import DietPlanRepository
-from app.services.nutrition_service import NutritionService
 from app.schemas.nutrition import MacroBreakdown, NutritionCalculation
+from app.services.nutrition_service import NutritionService
 
 router = APIRouter(prefix="/nutrition")
 
 
 class NutritionCalcRequest(BaseModel):
-    weight_kg: Optional[float] = None
-    height_cm: Optional[float] = None
-    age: Optional[int] = None
-    gender: Optional[str] = None
+    weight_kg: float | None = None
+    height_cm: float | None = None
+    age: int | None = None
+    gender: str | None = None
     activity_level: str = "moderate"
     goal: str = "maintenance"
-    waist_cm: Optional[float] = None
-    hip_cm: Optional[float] = None
-    neck_cm: Optional[float] = None
+    waist_cm: float | None = None
+    hip_cm: float | None = None
+    neck_cm: float | None = None
 
 
 class GenerateDietRequest(BaseModel):
@@ -122,3 +120,23 @@ async def generate_diet_plan(
         allergies=body.allergies,
     )
     return result
+
+
+@router.get("/diet-plans")
+async def list_diet_plans(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """The user's saved diet plans, newest first, in the same shape as generate-diet."""
+    cursor = (
+        db["diet_plans"]
+        .find({"user_id": current_user["id"], "meal_plan.0": {"$exists": True}})
+        .sort("created_at", -1)
+        .limit(limit)
+    )
+    plans = []
+    async for doc in cursor:
+        doc["id"] = str(doc.pop("_id"))
+        plans.append(doc)
+    return plans

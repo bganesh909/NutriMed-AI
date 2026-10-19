@@ -1,4 +1,3 @@
-from typing import Optional
 from datetime import datetime
 
 from app.repositories.base import BaseRepository
@@ -13,8 +12,8 @@ class ProgressRepository(BaseRepository):
     async def get_history(
         self,
         user_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
         skip: int = 0,
         limit: int = 100,
     ) -> list[dict]:
@@ -33,7 +32,7 @@ class ProgressRepository(BaseRepository):
             limit=limit,
         )
 
-    async def get_latest(self, user_id: str) -> Optional[dict]:
+    async def get_latest(self, user_id: str) -> dict | None:
         results = await self.find_many(
             {"user_id": user_id},
             sort=[("recorded_at", -1)],

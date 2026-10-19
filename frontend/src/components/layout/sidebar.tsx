@@ -2,16 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Upload,
-  UtensilsCrossed,
-  Dumbbell,
-  TrendingUp,
-  Settings,
-  Heart,
-  Menu,
-} from "lucide-react";
+import { Heart, Menu } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -19,17 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Separator } from "@/components/ui/separator";
 import { useState } from "react";
+import { adminNavItem, navItems } from "./nav";
 
-const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/upload-report", label: "Upload Report", icon: Upload },
-  { href: "/diet-plan", label: "Diet Plan", icon: UtensilsCrossed },
-  { href: "/workout-plan", label: "Workout Plan", icon: Dumbbell },
-  { href: "/progress", label: "Progress", icon: TrendingUp },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
-
-function NavContent() {
+function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { user } = useAuthStore();
 
@@ -45,12 +28,13 @@ function NavContent() {
       <Separator className="bg-slate-800" />
 
       <nav className="flex-1 p-4 space-y-1">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
+        {(user?.role === "admin" ? [...navItems, adminNavItem] : navItems).map((item) => {
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
                 isActive
@@ -109,7 +93,7 @@ export function MobileSidebar() {
         <Menu className="h-5 w-5" />
       </SheetTrigger>
       <SheetContent side="left" className="w-64 p-0 bg-slate-900 border-slate-800">
-        <NavContent />
+        <NavContent onNavigate={() => setOpen(false)} />
       </SheetContent>
     </Sheet>
   );

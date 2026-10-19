@@ -1,5 +1,5 @@
-import os
 import uuid
+from datetime import UTC
 from pathlib import Path
 
 from fastapi import HTTPException, UploadFile, status
@@ -31,8 +31,7 @@ class ReportService:
         if file.content_type not in ALLOWED_CONTENT_TYPES:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported file type: {file.content_type}. "
-                f"Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}",
+                detail=f"Unsupported file type: {file.content_type}. Allowed: {', '.join(ALLOWED_CONTENT_TYPES)}",
             )
 
         raw_bytes = await file.read()
@@ -59,10 +58,10 @@ class ReportService:
             "analysis_result": None,
         }
 
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        report_doc["created_at"] = datetime.now(timezone.utc)
-        report_doc["updated_at"] = datetime.now(timezone.utc)
+        report_doc["created_at"] = datetime.now(UTC)
+        report_doc["updated_at"] = datetime.now(UTC)
 
         created = await self.report_repo.create(report_doc)
         return created
@@ -81,9 +80,7 @@ class ReportService:
             )
         return report
 
-    async def get_user_reports(
-        self, user_id: str, skip: int = 0, limit: int = 50
-    ) -> dict:
+    async def get_user_reports(self, user_id: str, skip: int = 0, limit: int = 50) -> dict:
         reports = await self.report_repo.get_by_user(user_id, skip=skip, limit=limit)
         total = await self.report_repo.count({"user_id": user_id})
         return {"reports": reports, "total": total}
@@ -105,12 +102,12 @@ class ReportService:
             from app.workers.tasks import analyse_report_task
 
             analyse_report_task.delay(report_id)
-        except ImportError:
+        except ImportError as exc:
             # Workers module may not be available; update status directly
             await self.report_repo.update_status(report_id, "uploaded")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Analysis worker is not available",
-            )
+            ) from exc
 
         return {"report_id": report_id, "status": "processing"}

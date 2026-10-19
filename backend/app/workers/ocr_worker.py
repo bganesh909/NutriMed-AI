@@ -6,7 +6,7 @@ extraction result in MongoDB, and chains to the biomarker extraction task.
 """
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 from bson import ObjectId
@@ -43,7 +43,7 @@ def process_ocr(self, report_id: str, file_path: str):
     # Mark the report as processing
     db.reports.update_one(
         {"_id": report_oid},
-        {"$set": {"status": "processing", "updated_at": datetime.now(timezone.utc)}},
+        {"$set": {"status": "processing", "updated_at": datetime.now(UTC)}},
     )
 
     try:
@@ -75,7 +75,7 @@ def process_ocr(self, report_id: str, file_path: str):
                 "$set": {
                     "ocr_result": ocr_result,
                     "status": "ocr_completed",
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
@@ -93,8 +93,8 @@ def process_ocr(self, report_id: str, file_path: str):
                 "$set": {
                     "status": "failed",
                     "error": str(exc),
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc

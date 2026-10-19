@@ -5,52 +5,51 @@ AI-powered healthcare platform that combines lab report analysis, personalised n
 ## Architecture
 
 ```
-                         +-------------------+
-                         |   Next.js 14 SPA  |
-                         |   (Frontend)      |
-                         +--------+----------+
-                                  |
-                         +--------v----------+
-                         |   Nginx Reverse   |
-                         |   Proxy (:80)     |
-                         +--------+----------+
-                                  |
-              +-------------------+-------------------+
-              |                                       |
-   +----------v-----------+              +------------v-----------+
-   | FastAPI API Gateway   |              |  Next.js SSR / Static |
-   | (:8000)               |              |  (:3000)              |
-   +----+-----+-----+-----+              +-----------------------+
-        |     |     |
-   +----v-+ +-v---+ +--v----+     +----------------+
-   |Celery| |Redis| |Rabbit |     |  Ollama LLM    |
-   |Worker| |Cache| |MQ     |     |  (:11434)      |
-   +------+ +-----+ +-------+     +-------+--------+
-        |                                  |
-   +----v--------------+     +-------------v-------+
-   |  MongoDB 7         |     |  Microservices       |
-   |  (Primary Store)   |     |  OCR     (:8001)     |
-   +--------------------+     |  LLM     (:8002)     |
-                              |  Nutrition(:8003)     |
-                              |  Fitness (:8004)      |
-                              |  PDF     (:8005)      |
-                              |  RAG     (:8006)      |
-                              +-----------------------+
+                    +-------------------+
+                    |   Next.js 16 SPA  |
+                    |   (:3000)         |
+                    +---------+---------+
+                              |
+                    +---------v---------+
+                    | Nginx reverse     |
+                    | proxy (:80)       |
+                    +---------+---------+
+                              |
+                    +---------v---------+        +------------------+
+                    | FastAPI gateway   +------->|  Ollama (:11434) |
+                    | (:8000)           |        +------------------+
+                    +--+-----+--------+-+
+                       |     |        |          +------------------+
+              +--------v-+ +-v-----+  +--------->| OCR svc (:8001)  |
+              | MongoDB  | | Redis |       ^     +------------------+
+              +----------+ +---+---+       |
+                               |           |
+                        +------v-------+   |
+                        | Celery worker+---+
+                        +--------------+
 ```
+
+The API gateway is a modular monolith: nutrition, fitness, lab interpretation
+and PDF generation run in-process, and it calls Ollama directly. The OCR
+service is the only microservice it talks to.
+
+Diet and workout plans are grounded in curated databases (113 foods, 81
+exercises) and every macro and form instruction is verified against them
+rather than trusted from the model, with deterministic template fallbacks when
+generation fails. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Tech Stack
 
 | Layer           | Technology                                           |
 |-----------------|------------------------------------------------------|
-| Frontend        | Next.js 14, TypeScript, Tailwind CSS, shadcn/ui      |
+| Frontend        | Next.js 16, TypeScript, Tailwind CSS, shadcn/ui      |
 | API Gateway     | FastAPI (Python 3.11+), Pydantic v2                  |
 | Database        | MongoDB 7 (motor async driver)                       |
 | Cache           | Redis 7                                              |
 | Message Queue   | RabbitMQ 3                                           |
 | Task Queue      | Celery                                               |
 | LLM             | Ollama (Llama 3, Mistral, etc.)                      |
-| OCR             | Tesseract / PaddleOCR                                |
-| Vector Store    | ChromaDB (RAG service)                               |
+| OCR             | Tesseract (default) or PaddleOCR (optional)          |
 | PDF Generation  | ReportLab / WeasyPrint                               |
 | Containerisation| Docker, Docker Compose                               |
 
@@ -95,7 +94,7 @@ cd seeds && python seed_data.py
 
 ```bash
 # After Ollama container is running
-docker compose exec ollama ollama pull llama3
+docker compose exec ollama ollama pull mistral:7b
 docker compose exec ollama ollama pull mistral
 ```
 
@@ -112,8 +111,9 @@ pip install -r requirements.txt
 # Start MongoDB, Redis, RabbitMQ locally (or via Docker)
 docker compose up -d mongo redis rabbitmq
 
-# Run the API server
-uvicorn app.main:app --reload --port 8000
+# Run the API server. DEBUG=true is for local development only: among other
+# things it lets the API start with the placeholder JWT_SECRET / AES_KEY.
+DEBUG=true uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend
@@ -158,6 +158,21 @@ See [docs/API.md](docs/API.md) for full endpoint documentation.
 | POST   | /api/v1/progress/                 | Log progress entry                 |
 | GET    | /api/v1/progress/                 | Get progress history               |
 | GET    | /api/v1/pdf/reports/{id}/pdf      | Download generated PDF report      |
+| POST   | /api/v1/auth/forgot-password      | Email a password-reset link        |
+| POST   | /api/v1/auth/reset-password       | Set a new password from the link   |
+| POST   | /api/v1/auth/change-password      | Change password (signed in)        |
+| DELETE | /api/v1/users/me                  | Delete account and all its data    |
+| GET    | /api/v1/users/me/medical-profile  | Get medical profile                |
+| DELETE | /api/v1/reports/{id}              | Delete a report and derived data   |
+| GET    | /api/v1/nutrition/diet-plans      | Saved diet plans, newest first     |
+| GET    | /api/v1/fitness/plans             | Saved workout plans, newest first  |
+| GET    | /api/v1/notifications/            | Notifications and unread count     |
+| POST   | /api/v1/notifications/{id}/read   | Mark one notification read         |
+| POST   | /api/v1/notifications/read-all    | Mark all notifications read        |
+| GET    | /api/v1/admin/stats               | Platform stats (admin)             |
+| GET    | /api/v1/admin/users               | List/search users (admin)          |
+| PATCH  | /api/v1/admin/users/{id}/role     | Change a user's role (admin)       |
+| DELETE | /api/v1/admin/users/{id}          | Delete a user (admin)              |
 
 ## Project Structure
 

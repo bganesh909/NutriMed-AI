@@ -8,7 +8,8 @@ LABEL maintainer="NutriMed AI" \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Install system dependencies for OpenCV, PaddlePaddle, and pdfplumber
+# System deps: tesseract (OCR engine) plus the shared libs OpenCV/
+# PaddlePaddle and pdfplumber need.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
@@ -18,6 +19,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     libfontconfig1 \
     libice6 \
+    tesseract-ocr \
+    tesseract-ocr-eng \
     gcc \
     g++ \
     && rm -rf /var/lib/apt/lists/*
@@ -25,9 +28,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install Python dependencies
-COPY requirements.txt .
+COPY requirements.txt requirements-paddle.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
+
+# PaddleOCR is optional and linux/amd64-only; the service falls back to
+# Tesseract if this layer is skipped or the install fails.
+ARG INSTALL_PADDLE=true
+RUN if [ "$INSTALL_PADDLE" = "true" ]; then \
+        pip install --no-cache-dir -r requirements-paddle.txt || \
+        echo "PaddleOCR unavailable for this platform; using Tesseract."; \
+    fi
 
 # Copy application code
 COPY app/ ./app/

@@ -6,13 +6,28 @@ biomarker data (e.g., lower intensity if anemic, joint-friendly if high uric aci
 """
 
 import json
-from typing import Optional
+import logging
+from datetime import UTC
 
 import httpx
-from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.repositories.workout_plan_repository import WorkoutPlanRepository
+from app.services.generation_metrics import (
+    OUTCOME_FALLBACK,
+    OUTCOME_LLM_REPAIRED,
+    OUTCOME_LLM_VERIFIED,
+    record_generation_async,
+)
+from app.services.lab_interpretation_service import LabInterpretationService
+from app.services.plan_grounding import (
+    format_exercise_catalogue,
+    select_exercises,
+    verify_workout_plan,
+)
+from app.services.workout_templates import build_fallback_days
+
+logger = logging.getLogger("nutrimed.fitness")
 
 
 # Biomarker-based adaptations: marker -> condition -> adaptation advice
@@ -20,7 +35,9 @@ _BIOMARKER_ADAPTATIONS: dict[str, list[dict]] = {
     "hemoglobin": [
         {
             "condition": lambda v, g: v < (12.0 if g == "female" else 13.0),
-            "adaptation": "Reduce high-intensity exercises. Focus on low-to-moderate intensity until hemoglobin normalises.",
+            "adaptation": (
+                "Reduce high-intensity exercises. Focus on low-to-moderate intensity until hemoglobin normalises."
+            ),
         },
     ],
     "tsh": [
@@ -44,7 +61,9 @@ _BIOMARKER_ADAPTATIONS: dict[str, list[dict]] = {
     "fasting_sugar": [
         {
             "condition": lambda v, _: v > 125,
-            "adaptation": "Include regular aerobic exercise (walking, cycling). Monitor blood sugar before/after exercise.",
+            "adaptation": (
+                "Include regular aerobic exercise (walking, cycling). Monitor blood sugar before/after exercise."
+            ),
         },
     ],
     "hba1c": [
@@ -84,7 +103,7 @@ class FitnessService:
         difficulty: str = "intermediate",
         days_per_week: int = 4,
         conditions: list[str] | None = None,
-        biomarkers: Optional[dict[str, float]] = None,
+        biomarkers: dict[str, float] | None = None,
     ) -> dict:
         gender = (user_profile.get("gender") or "male").lower()
         age = user_profile.get("age") or 30
@@ -96,32 +115,91 @@ class FitnessService:
 
         adaptations_str = "; ".join(adaptations) if adaptations else "none"
 
+        # Derive the rule-engine view of the biomarkers so exercise selection can
+        # cap intensity clinically (e.g. anemia limits difficulty) rather than
+        # relying on the model to respect a sentence in the prompt.
+        rule_engine = None
+        if biomarkers:
+            try:
+                rule_engine = LabInterpretationService().interpret(dict(biomarkers), gender)
+            except Exception:
+                logger.warning("Rule engine failed during workout grounding", exc_info=True)
+
+        catalogue = format_exercise_catalogue(select_exercises(difficulty=difficulty, rule_engine=rule_engine))
+
         prompt = (
             f"Create a {days_per_week}-day weekly workout plan for a {age}-year-old {gender} "
             f"weighing {weight}kg.\n"
             f"Goal: {goal}. Difficulty: {difficulty}.\n"
             f"Health conditions / adaptations: {adaptations_str}.\n\n"
-            "For each day, provide the workout name and a list of exercises with sets, reps, "
-            "and rest time. Return valid JSON with this structure:\n"
-            '[{"day_name": "Day 1 - Push", "exercises": [{"name": "Bench Press", '
+            f"You may ONLY use exercises from this catalogue, by exact name. It "
+            f"is already filtered for this person's level and lab findings:\n"
+            f"{catalogue}\n\n"
+            "RULES:\n"
+            "- Use exact names from the catalogue. Never invent an exercise.\n"
+            "- Do NOT write form or technique instructions; they come from the "
+            "catalogue and anything you write is discarded.\n"
+            "- Give sets, reps and rest for each exercise, plus a warm-up and "
+            "cool-down per day.\n\n"
+            "Return valid JSON with this structure:\n"
+            '[{"day_name": "Day 1 - Push", "warm_up": "...", "cool_down": "...", '
+            '"exercises": [{"name": "Push-ups", '
             '"sets": 4, "reps": "8-10", "rest": "90s"}]}]'
         )
 
         plan_data = await self._call_llm(prompt)
+
+        raw_days = plan_data if isinstance(plan_data, list) else []
+        verified_days, warnings = verify_workout_plan(raw_days)
+        if warnings:
+            logger.warning("Workout plan verification for user %s: %s", user_id, warnings[:10])
+        outcome = (
+            OUTCOME_LLM_REPAIRED
+            if (verified_days and warnings)
+            else OUTCOME_LLM_VERIFIED
+            if verified_days
+            else OUTCOME_FALLBACK
+        )
+        if not verified_days:
+            # Unusable or no answer from the model: serve the deterministic
+            # template, as the report workers do, rather than an empty plan.
+            logger.info("Workout plan fell back to templates for user %s", user_id)
+            verified_days, _ = verify_workout_plan(
+                build_fallback_days(
+                    age=age,
+                    gender=gender,
+                    weight_kg=weight,
+                    height_cm=user_profile.get("height") or user_profile.get("height_cm") or 170,
+                    fitness_level=difficulty,
+                    goal=goal,
+                    days_per_week=days_per_week,
+                    conditions=conditions or [],
+                )
+            )
 
         plan_doc = {
             "user_id": user_id,
             "goal": goal,
             "difficulty": difficulty,
             "days_per_week": days_per_week,
-            "plan": plan_data if isinstance(plan_data, list) else [{"raw": plan_data}],
+            "days": verified_days,
+            "plan": verified_days,
+            "verified": True,
             "adaptations": adaptations,
             "notes": f"Generated for {goal} / {difficulty}. Adaptations: {adaptations_str}.",
         }
-        from datetime import datetime, timezone
+        from datetime import datetime
 
-        plan_doc["created_at"] = datetime.now(timezone.utc)
+        plan_doc["created_at"] = datetime.now(UTC)
         saved = await self.workout_plan_repo.create(plan_doc)
+        await record_generation_async(
+            self.workout_plan_repo.db,
+            kind="workout",
+            outcome=outcome,
+            user_id=user_id,
+            dropped=warnings,
+            model=settings.OLLAMA_MODEL,
+        )
         return saved
 
     async def _call_llm(self, prompt: str) -> list | str:
@@ -132,7 +210,7 @@ class FitnessService:
             "stream": False,
         }
         try:
-            async with httpx.AsyncClient(timeout=120) as client:
+            async with httpx.AsyncClient(timeout=settings.LLM_TIMEOUT_SECONDS) as client:
                 resp = await client.post(url, json=payload)
                 resp.raise_for_status()
                 data = resp.json()
@@ -143,8 +221,9 @@ class FitnessService:
                     return json.loads(text[start:end])
                 except (ValueError, json.JSONDecodeError):
                     return text
-        except httpx.HTTPError:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="LLM service (Ollama) is not available. Please ensure it is running.",
-            )
+        except httpx.HTTPError as exc:
+            # Treated like an unusable answer: the caller serves the template
+            # plan and records the fallback, as the report workers do, rather
+            # than failing the request because the model is slow or down.
+            logger.warning("LLM call failed (%s): %s", type(exc).__name__, exc)
+            return ""

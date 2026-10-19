@@ -1,4 +1,3 @@
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -9,6 +8,7 @@ from app.schemas.progress import (
     ProgressLogCreate,
     ProgressLogResponse,
 )
+from app.utils.validators import to_object_id
 
 router = APIRouter(prefix="/progress")
 
@@ -52,13 +52,7 @@ async def get_progress_history(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     total = await db["progress"].count_documents({"user_id": current_user["id"]})
-    cursor = (
-        db["progress"]
-        .find({"user_id": current_user["id"]})
-        .sort("date", -1)
-        .skip(skip)
-        .limit(limit)
-    )
+    cursor = db["progress"].find({"user_id": current_user["id"]}).sort("date", -1).skip(skip).limit(limit)
 
     entries = []
     async for doc in cursor:
@@ -81,7 +75,9 @@ async def get_progress_entry(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    doc = await db["progress"].find_one({"_id": ObjectId(entry_id), "user_id": current_user["id"]})
+    doc = await db["progress"].find_one(
+        {"_id": to_object_id(entry_id, "Progress entry"), "user_id": current_user["id"]}
+    )
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Progress entry not found")
     doc["id"] = str(doc.pop("_id"))

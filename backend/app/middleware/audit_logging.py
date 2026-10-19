@@ -5,10 +5,9 @@ Logs every HTTP request with user_id (if authenticated), endpoint, method,
 status code, and timestamp into a MongoDB 'audit_logs' collection.
 """
 
-import time
 import logging
-from datetime import datetime, timezone
-from typing import Optional
+import time
+from datetime import UTC, datetime
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -22,13 +21,11 @@ logger = logging.getLogger("nutrimed.audit")
 class AuditLoggingMiddleware(BaseHTTPMiddleware):
     """Log all API requests to the MongoDB audit_logs collection."""
 
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         start_time = time.time()
 
         # Extract user_id from JWT if present (best-effort, don't block request)
-        user_id: Optional[str] = None
+        user_id: str | None = None
         auth_header = request.headers.get("authorization", "")
         if auth_header.lower().startswith("bearer "):
             token = auth_header[7:]
@@ -36,7 +33,8 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
                 payload = verify_access_token(token)
                 user_id = payload.get("sub")
             except Exception:
-                pass
+                # Never let audit log break the request it is observing.
+                logger.debug("Suppressed audit log error", exc_info=True)
 
         # Process the request
         response = await call_next(request)
@@ -53,7 +51,7 @@ class AuditLoggingMiddleware(BaseHTTPMiddleware):
             "duration_ms": duration_ms,
             "ip_address": request.client.host if request.client else None,
             "user_agent": request.headers.get("user-agent"),
-            "timestamp": datetime.now(timezone.utc),
+            "timestamp": datetime.now(UTC),
         }
 
         # Write to MongoDB asynchronously (fire-and-forget)

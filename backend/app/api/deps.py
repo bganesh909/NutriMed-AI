@@ -26,12 +26,12 @@ async def get_current_user(
     """Decode JWT and return the full user document (minus password)."""
     try:
         payload = verify_access_token(credentials.credentials)
-    except Exception:
+    except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
     user_id: str = payload.get("sub", "")
     if not user_id:

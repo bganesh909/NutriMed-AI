@@ -9,6 +9,7 @@ from app.core.dependencies import get_current_user, get_db
 from app.core.security import decrypt_data
 from app.services.lab_interpretation_service import LabInterpretationService
 from app.services.pdf_service import PDFService
+from app.utils.validators import to_object_id
 
 router = APIRouter(prefix="/pdf")
 
@@ -24,9 +25,7 @@ async def download_generated_pdf(
     biomarkers, interpretation, diet plan, workout plan, supplements.
     """
     # Verify report ownership
-    report_doc = await db["reports"].find_one(
-        {"_id": ObjectId(report_id), "user_id": current_user["id"]}
-    )
+    report_doc = await db["reports"].find_one({"_id": to_object_id(report_id, "Report"), "user_id": current_user["id"]})
     if not report_doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -56,7 +55,8 @@ async def download_generated_pdf(
         if not markers:
             exclude = {"user_id", "report_id", "extracted_at", "created_at", "id"}
             markers = {
-                k: v for k, v in biomarkers.items()
+                k: v
+                for k, v in biomarkers.items()
                 if k not in exclude and v is not None and isinstance(v, (int, float))
             }
         if markers:
@@ -75,22 +75,17 @@ async def download_generated_pdf(
     # Fetch the most recent workout plan that actually has exercises (skip
     # placeholder/failed plans, e.g. a report-derived plan whose LLM step timed out).
     workout_plan = None
-    async for wp in db["workout_plans"].find(
-        {"user_id": current_user["id"]}
-    ).sort("created_at", -1):
-        days = wp.get("plan") or wp.get("days") or []
-        if isinstance(days, list) and any(
-            isinstance(d, dict) and d.get("exercises") for d in days
-        ):
+    async for wp in db["workout_plans"].find({"user_id": current_user["id"]}).sort("created_at", -1):
+        # "days" is the canonical list; "plan" may hold the raw LLM object.
+        days = wp.get("days") or wp.get("plan") or []
+        if isinstance(days, list) and any(isinstance(d, dict) and d.get("exercises") for d in days):
             wp.pop("_id", None)
             workout_plan = wp
             break
 
     # Extract supplements from the most recent recommendation that has any.
     supplements = None
-    async for rec_doc in db["recommendations"].find(
-        {"user_id": current_user["id"]}
-    ).sort("created_at", -1):
+    async for rec_doc in db["recommendations"].find({"user_id": current_user["id"]}).sort("created_at", -1):
         candidate = rec_doc.get("supplements") or rec_doc.get("supplement_suggestions")
         if isinstance(candidate, list) and candidate:
             supplements = candidate
@@ -122,7 +117,7 @@ async def download_original_report(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Download the original uploaded report file (decrypted)."""
-    doc = await db["reports"].find_one({"_id": ObjectId(report_id), "user_id": current_user["id"]})
+    doc = await db["reports"].find_one({"_id": to_object_id(report_id, "Report"), "user_id": current_user["id"]})
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
 
@@ -134,10 +129,12 @@ async def download_original_report(
         with open(file_path, "rb") as f:
             encrypted_content = f.read()
         content = decrypt_data(encrypted_content)
-    except FileNotFoundError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not found on disk")
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decrypt report")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not found on disk") from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decrypt report"
+        ) from exc
 
     original_filename = doc.get("original_filename", "report.pdf")
     return StreamingResponse(

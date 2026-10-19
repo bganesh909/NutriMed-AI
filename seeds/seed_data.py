@@ -91,9 +91,9 @@ async def create_indexes(db):
     await db["progress"].create_index("user_id")
     await db["progress"].create_index([("user_id", 1), ("date", -1)])
 
-    # Audit logs
+    # Audit logs. The TTL index on "timestamp" is managed by the API at startup
+    # (app/db/indexes.py); creating a plain one here would conflict with it.
     await db["audit_logs"].create_index("user_id")
-    await db["audit_logs"].create_index("timestamp")
 
     print("  Indexes created successfully.")
 

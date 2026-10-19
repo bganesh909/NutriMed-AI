@@ -1,4 +1,3 @@
-from typing import Any, Optional
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -34,11 +33,11 @@ class BaseRepository:
         document["_id"] = result.inserted_id
         return _serialize(document)
 
-    async def find_one(self, filter_: dict) -> Optional[dict]:
+    async def find_one(self, filter_: dict) -> dict | None:
         doc = await self.collection.find_one(filter_)
         return _serialize(doc)
 
-    async def find_by_id(self, doc_id: str) -> Optional[dict]:
+    async def find_by_id(self, doc_id: str) -> dict | None:
         doc = await self.collection.find_one({"_id": _oid(doc_id)})
         return _serialize(doc)
 
@@ -59,9 +58,7 @@ class BaseRepository:
     async def count(self, filter_: dict | None = None) -> int:
         return await self.collection.count_documents(filter_ or {})
 
-    async def update_one(
-        self, doc_id: str, update: dict, upsert: bool = False
-    ) -> Optional[dict]:
+    async def update_one(self, doc_id: str, update: dict, upsert: bool = False) -> dict | None:
         result = await self.collection.find_one_and_update(
             {"_id": _oid(doc_id)},
             {"$set": update},

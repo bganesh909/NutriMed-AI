@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
-from app.models.report import ReportStatus, ReportType
+from app.models.report import ReportType
 
 __all__ = ["ReportCreate", "ReportResponse", "ReportAnalysisResponse"]
 
@@ -19,8 +19,8 @@ class ReportResponse(BaseModel):
     report_type: str
     original_filename: str
     status: str
-    uploaded_at: Optional[datetime] = None
-    processed_at: Optional[datetime] = None
+    uploaded_at: datetime | None = None
+    processed_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
@@ -28,9 +28,9 @@ class ReportResponse(BaseModel):
 class ReportAnalysisResponse(BaseModel):
     report_id: str
     status: str
-    biomarkers: Optional[Dict[str, Any]] = None
-    deficiencies: List[Any] = []
-    risk_factors: List[Any] = []
-    dietary_suggestions: List[Any] = []
-    supplement_suggestions: List[Any] = []
-    warnings: List[Any] = []
+    biomarkers: dict[str, Any] | None = None
+    deficiencies: list[Any] = []
+    risk_factors: list[Any] = []
+    dietary_suggestions: list[Any] = []
+    supplement_suggestions: list[Any] = []
+    warnings: list[Any] = []

@@ -1,26 +1,23 @@
-from typing import Optional
-
-from bson import ObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
 from app.core.dependencies import get_current_user, get_db
 from app.repositories.biomarker_repository import BiomarkerRepository
+from app.repositories.diet_plan_repository import DietPlanRepository
 from app.repositories.recommendation_repository import RecommendationRepository
 from app.repositories.user_repository import UserRepository
 from app.repositories.workout_plan_repository import WorkoutPlanRepository
-from app.repositories.diet_plan_repository import DietPlanRepository
+from app.services.fitness_service import FitnessService
 from app.services.lab_interpretation_service import LabInterpretationService
 from app.services.nutrition_service import NutritionService
-from app.services.fitness_service import FitnessService
 from app.services.recommendation_service import RecommendationService
 
 router = APIRouter(prefix="/recommendations")
 
 
 class GenerateRequest(BaseModel):
-    report_id: Optional[str] = None
+    report_id: str | None = None
 
 
 def _build_recommendation_service(db: AsyncIOMotorDatabase) -> RecommendationService:

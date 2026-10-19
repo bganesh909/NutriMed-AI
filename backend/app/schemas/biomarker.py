@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Dict, Optional
 
 from pydantic import BaseModel
 
@@ -8,52 +7,52 @@ __all__ = ["BiomarkerCreate", "BiomarkerResponse", "BiomarkerWithInterpretation"
 
 class BiomarkerCreate(BaseModel):
     report_id: str
-    hemoglobin: Optional[float] = None
-    vitamin_d: Optional[float] = None
-    vitamin_b12: Optional[float] = None
-    ldl: Optional[float] = None
-    hdl: Optional[float] = None
-    triglycerides: Optional[float] = None
-    fasting_sugar: Optional[float] = None
-    hba1c: Optional[float] = None
-    creatinine: Optional[float] = None
-    tsh: Optional[float] = None
-    sgpt: Optional[float] = None
-    sgot: Optional[float] = None
-    iron: Optional[float] = None
-    calcium: Optional[float] = None
-    urea: Optional[float] = None
-    uric_acid: Optional[float] = None
+    hemoglobin: float | None = None
+    vitamin_d: float | None = None
+    vitamin_b12: float | None = None
+    ldl: float | None = None
+    hdl: float | None = None
+    triglycerides: float | None = None
+    fasting_sugar: float | None = None
+    hba1c: float | None = None
+    creatinine: float | None = None
+    tsh: float | None = None
+    sgpt: float | None = None
+    sgot: float | None = None
+    iron: float | None = None
+    calcium: float | None = None
+    urea: float | None = None
+    uric_acid: float | None = None
 
 
 class BiomarkerResponse(BaseModel):
     id: str
     user_id: str
     report_id: str
-    hemoglobin: Optional[float] = None
-    vitamin_d: Optional[float] = None
-    vitamin_b12: Optional[float] = None
-    ldl: Optional[float] = None
-    hdl: Optional[float] = None
-    triglycerides: Optional[float] = None
-    fasting_sugar: Optional[float] = None
-    hba1c: Optional[float] = None
-    creatinine: Optional[float] = None
-    tsh: Optional[float] = None
-    sgpt: Optional[float] = None
-    sgot: Optional[float] = None
-    iron: Optional[float] = None
-    calcium: Optional[float] = None
-    urea: Optional[float] = None
-    uric_acid: Optional[float] = None
-    extracted_at: Optional[datetime] = None
+    hemoglobin: float | None = None
+    vitamin_d: float | None = None
+    vitamin_b12: float | None = None
+    ldl: float | None = None
+    hdl: float | None = None
+    triglycerides: float | None = None
+    fasting_sugar: float | None = None
+    hba1c: float | None = None
+    creatinine: float | None = None
+    tsh: float | None = None
+    sgpt: float | None = None
+    sgot: float | None = None
+    iron: float | None = None
+    calcium: float | None = None
+    urea: float | None = None
+    uric_acid: float | None = None
+    extracted_at: datetime | None = None
 
     model_config = {"from_attributes": True}
 
 
 class BiomarkerInterpretation(BaseModel):
     name: str
-    value: Optional[float] = None
+    value: float | None = None
     unit: str = ""
     normal_range: str = ""
     status: str = "normal"

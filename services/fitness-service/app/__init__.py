@@ -1,1 +1,0 @@
-# NutriMed AI - Fitness Service

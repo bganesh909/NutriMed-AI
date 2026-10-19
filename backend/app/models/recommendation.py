@@ -1,19 +1,18 @@
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
 
 class RecommendationModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
     biomarker_id: str
-    deficiencies: List[str] = Field(default_factory=list)
-    risk_factors: List[str] = Field(default_factory=list)
-    dietary_suggestions: List[str] = Field(default_factory=list)
-    supplement_suggestions: List[str] = Field(default_factory=list)
-    warnings: List[str] = Field(default_factory=list)
-    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deficiencies: list[str] = Field(default_factory=list)
+    risk_factors: list[str] = Field(default_factory=list)
+    dietary_suggestions: list[str] = Field(default_factory=list)
+    supplement_suggestions: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

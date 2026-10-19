@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { useAuthStore } from "@/stores/auth-store";
 import { useRouter } from "next/navigation";
@@ -20,6 +20,7 @@ interface RegisterPayload {
   height: number;
   weight: number;
   goal: string;
+  accepted_terms: boolean;
 }
 
 interface TokenResponse {
@@ -29,64 +30,71 @@ interface TokenResponse {
   expires_in: number;
 }
 
-function setTokenCookie(token: string) {
-  document.cookie = `token=${token}; path=/; max-age=${30 * 60}; SameSite=Lax`;
-}
-
-function removeTokenCookie() {
-  document.cookie = "token=; path=/; max-age=0";
-}
-
-export function useLogin() {
+/**
+ * Store a new session and load its profile. The query cache is cleared first:
+ * it is keyed without the user id, so a previous account's reports would
+ * otherwise show until they went stale.
+ */
+function useStartSession(redirectTo = "/dashboard") {
   const { login, setUser } = useAuthStore();
+  const queryClient = useQueryClient();
   const router = useRouter();
+
+  return async (data: TokenResponse) => {
+    queryClient.clear();
+    const token = data.access_token;
+    login(null, token, data.refresh_token);
+    try {
+      const { data: user } = await api.get<User>("/users/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser(user);
+    } catch {}
+    router.push(redirectTo);
+  };
+}
+
+/** Sign in, then go to `redirectTo` (a same-site path) or the dashboard. */
+export function useLogin(redirectTo?: string) {
+  const startSession = useStartSession(redirectTo);
 
   return useMutation({
     mutationFn: async (payload: LoginPayload) => {
       const { data } = await api.post<TokenResponse>("/auth/login", payload);
       return data;
     },
-    onSuccess: async (data) => {
-      const token = data.access_token;
-      login(null, token);
-      setTokenCookie(token);
-      // Fetch user profile
-      try {
-        const { data: user } = await api.get<User>("/users/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(user);
-      } catch {}
-      router.push("/dashboard");
-    },
+    onSuccess: startSession,
   });
 }
 
 export function useRegister() {
-  const { login, setUser } = useAuthStore();
-  const router = useRouter();
+  const startSession = useStartSession();
 
   return useMutation({
-    mutationFn: async (payload: RegisterPayload) => {
-      const { data } = await api.post<TokenResponse>("/auth/register", payload);
+    mutationFn: async ({ goal, ...rest }: RegisterPayload) => {
+      // The API stores goals as a list (app/models/user.py); the form collects one.
+      const { data } = await api.post<TokenResponse>("/auth/register", {
+        ...rest,
+        goals: goal ? [goal] : [],
+      });
       return data;
     },
-    onSuccess: async (data) => {
-      const token = data.access_token;
-      login(null, token);
-      setTokenCookie(token);
-      try {
-        const { data: user } = await api.get<User>("/users/me", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setUser(user);
-      } catch {}
-      router.push("/dashboard");
-    },
+    onSuccess: startSession,
   });
 }
 
-export { removeTokenCookie };
+/** End the session and drop every cached response belonging to it. */
+export function useLogout() {
+  const logout = useAuthStore((s) => s.logout);
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return () => {
+    logout();
+    queryClient.clear();
+    router.push("/login");
+  };
+}
 
 export function useCurrentUser() {
   const { setUser, isAuthenticated } = useAuthStore();
@@ -99,5 +107,52 @@ export function useCurrentUser() {
       return data;
     },
     enabled: isAuthenticated,
+  });
+}
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: async (email: string) => {
+      const { data } = await api.post<{ message: string }>("/auth/forgot-password", { email });
+      return data;
+    },
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: async (payload: { token: string; password: string }) => {
+      const { data } = await api.post<{ message: string }>("/auth/reset-password", payload);
+      return data;
+    },
+  });
+}
+
+/**
+ * Change the password. The API signs out every other session and returns
+ * fresh tokens for this one.
+ */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (payload: { current_password: string; new_password: string }) => {
+      const { data } = await api.post<TokenResponse>("/auth/change-password", payload);
+      return data;
+    },
+    onSuccess: (data) => {
+      const { user, login } = useAuthStore.getState();
+      login(user, data.access_token, data.refresh_token);
+    },
+  });
+}
+
+/** Permanently delete the account and all of its data, then sign out. */
+export function useDeleteAccount() {
+  const logout = useLogout();
+
+  return useMutation({
+    mutationFn: async (password: string) => {
+      await api.delete("/users/me", { data: { password } });
+    },
+    onSuccess: logout,
   });
 }

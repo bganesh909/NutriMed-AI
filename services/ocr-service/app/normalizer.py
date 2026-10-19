@@ -6,8 +6,8 @@ and cleans up whitespace/formatting issues.
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -18,11 +18,11 @@ logger = logging.getLogger(__name__)
 # Map of (regex_pattern, replacement) applied in sequence
 _OCR_CHAR_FIXES: list[tuple[str, str]] = [
     # Digit/letter confusion in numeric contexts
-    (r"(?<=\d)[Oo](?=\d)", "0"),         # 1O5 -> 105
-    (r"(?<=\d)[lI](?=\d)", "1"),         # 2l3 -> 213
-    (r"(?<=\d)[S](?=\d)", "5"),          # 1S0 -> 150
-    (r"(?<=\d)[B](?=\d)", "8"),          # 1B0 -> 180
-    (r"(?<=\d)[Z](?=\d)", "2"),          # 1Z3 -> 123
+    (r"(?<=\d)[Oo](?=\d)", "0"),  # 1O5 -> 105
+    (r"(?<=\d)[lI](?=\d)", "1"),  # 2l3 -> 213
+    (r"(?<=\d)[S](?=\d)", "5"),  # 1S0 -> 150
+    (r"(?<=\d)[B](?=\d)", "8"),  # 1B0 -> 180
+    (r"(?<=\d)[Z](?=\d)", "2"),  # 1Z3 -> 123
     # Common unit misreads
     (r"\bmg/d[iI1]\b", "mg/dL"),
     (r"\bmg/d1\b", "mg/dL"),
@@ -281,6 +281,7 @@ _BIOMARKER_NAME_MAP: dict[str, str] = {
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def normalize(text: str) -> str:
     """Run full normalization pipeline on OCR text."""

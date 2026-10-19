@@ -1,10 +1,26 @@
-paddleocr>=2.7.0
-paddlepaddle>=2.6.0
-opencv-python-headless>=4.8.0
-pdfplumber>=0.10.0
-Pillow>=10.0.0
+# --- core service ---
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
 python-multipart>=0.0.9
-numpy>=1.24.0
 pydantic>=2.5.0
+numpy>=1.24.0
+Pillow>=10.0.0
+
+# --- digital PDF text extraction ---
+pdfplumber>=0.10.0
+
+# --- image preprocessing (grayscale, denoise, threshold, deskew) ---
+# Required by app/preprocessor.py for every image path, not just PaddleOCR.
+opencv-python-headless>=4.8.0
+
+# --- OCR engine for images and scanned PDFs ---
+# Tesseract is the default backend: it installs everywhere (including Apple
+# Silicon) and needs the system `tesseract` binary:
+#   macOS:  brew install tesseract
+#   Debian: apt-get install -y tesseract-ocr
+pytesseract>=0.3.10
+
+# PaddleOCR is an optional, higher-accuracy alternative and is preferred
+# automatically when importable. It has no Apple Silicon wheel, so it lives in
+# requirements-paddle.txt rather than here:
+#   pip install -r requirements-paddle.txt

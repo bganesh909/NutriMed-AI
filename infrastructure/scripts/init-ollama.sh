@@ -32,7 +32,8 @@ echo "Ollama is ready."
 # Pull models
 echo ""
 echo "Pulling Llama 3 8B..."
-ollama pull llama3:8b
+# llama3 is not used by the application; mistral:7b is the configured model.
+# ollama pull llama3:8b
 echo "Llama 3 8B downloaded successfully."
 
 echo ""

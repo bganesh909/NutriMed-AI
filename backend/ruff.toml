@@ -21,6 +21,9 @@ ignore = [
 
 [lint.per-file-ignores]
 "tests/**" = ["S101", "S106"]
+# Curated datasets: one record per line is the readable format for this data,
+# and wrapping them would make review harder, not easier.
+"app/data/*.py" = ["E501"]
 
 [format]
 quote-style = "double"

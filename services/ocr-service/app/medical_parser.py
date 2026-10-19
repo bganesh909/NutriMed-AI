@@ -10,10 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
-from typing import Optional
-
-from app.normalizer import canonicalize_biomarker_name
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -22,11 +19,12 @@ logger = logging.getLogger(__name__)
 # Data classes
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ParsedBiomarker:
     test_name: str
     canonical_name: str
-    value: Optional[float] = None
+    value: float | None = None
     value_raw: str = ""
     unit: str = ""
     reference_range: str = ""
@@ -50,7 +48,7 @@ class ParsedBiomarker:
 BIOMARKER_PATTERNS: dict[str, tuple[str, str]] = {
     # CBC
     "hemoglobin": (
-        r"(?:h[ae]moglobin|hgb|hb)\s*(?:\(%\))?",
+        r"(?:ha?emoglobin|hgb|hb)\s*(?:\(%\))?",
         r"(\d+\.?\d*)\s*(g/dL|gm/dl|g%|gm%)?",
     ),
     "rbc": (
@@ -257,7 +255,7 @@ BIOMARKER_PATTERNS: dict[str, tuple[str, str]] = {
 _REF_RANGE_PATTERN = re.compile(
     r"(?:"
     r"(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)"  # range: 13.0-17.0
-    r"|[<>]\s*(\d+\.?\d*)"                  # inequality: < 200
+    r"|[<>]\s*(\d+\.?\d*)"  # inequality: < 200
     r"|(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)\s*(mg/dL|g/dL|U/L|IU/L|mEq/L|mmol/L|ng/mL|pg/mL|%|fL|mIU/mL|ug/dL)?"
     r")"
 )
@@ -267,10 +265,22 @@ _REF_RANGE_PATTERN = re.compile(
 # Parser class
 # ---------------------------------------------------------------------------
 
+
+# A parenthetical assay qualifier immediately after the test name, e.g. the
+# "(25-OH)" in "Vitamin D (25-OH): 22 ng/mL". Its digits must not be read as
+# the result.
+_ASSAY_QUALIFIER_RE = re.compile(r"^\s*\([^)]*\)")
+
+
+def _skip_assay_qualifier(text: str) -> str:
+    """Drop a leading parenthetical qualifier so value scanning starts after it."""
+    return _ASSAY_QUALIFIER_RE.sub("", text, count=1)
+
+
 class MedicalParser:
     """Main engine for extracting biomarkers from OCR text."""
 
-    def __init__(self, patterns: Optional[dict[str, tuple[str, str]]] = None):
+    def __init__(self, patterns: dict[str, tuple[str, str]] | None = None):
         self.patterns = patterns or BIOMARKER_PATTERNS
 
     def parse(self, text: str) -> list[ParsedBiomarker]:
@@ -311,7 +321,7 @@ class MedicalParser:
                     continue
 
                 # Extract value + unit from the rest of the line after the name
-                remainder = line[name_match.end():]
+                remainder = _skip_assay_qualifier(line[name_match.end() :])
                 val_match = re.search(val_pat, remainder, re.IGNORECASE)
                 if not val_match:
                     continue
@@ -328,14 +338,16 @@ class MedicalParser:
                 except (ValueError, TypeError):
                     value = None
 
-                results.append(ParsedBiomarker(
-                    test_name=name_match.group(0).strip(),
-                    canonical_name=bio_key,
-                    value=value,
-                    value_raw=value_str,
-                    unit=unit.strip(),
-                    reference_range=ref_range,
-                ))
+                results.append(
+                    ParsedBiomarker(
+                        test_name=name_match.group(0).strip(),
+                        canonical_name=bio_key,
+                        value=value,
+                        value_raw=value_str,
+                        unit=unit.strip(),
+                        reference_range=ref_range,
+                    )
+                )
                 break  # Found match for this line, move to next line
 
         return results
@@ -348,9 +360,11 @@ class MedicalParser:
             # Search entire text for each biomarker
             for name_match in re.finditer(name_pat, text, re.IGNORECASE):
                 # Look for value within 100 characters after the name
-                search_window = text[name_match.end():name_match.end() + 100]
-                # Skip optional colon/equals separator
+                search_window = text[name_match.end() : name_match.end() + 100]
+                # Skip an assay qualifier, then an optional colon/equals separator
+                search_window = _skip_assay_qualifier(search_window)
                 search_window = re.sub(r"^\s*[:=]\s*", "", search_window)
+                search_window = _skip_assay_qualifier(search_window)
 
                 val_match = re.search(val_pat, search_window, re.IGNORECASE)
                 if not val_match:
@@ -367,21 +381,23 @@ class MedicalParser:
                 except (ValueError, TypeError):
                     value = None
 
-                results.append(ParsedBiomarker(
-                    test_name=name_match.group(0).strip(),
-                    canonical_name=bio_key,
-                    value=value,
-                    value_raw=value_str,
-                    unit=unit.strip(),
-                    reference_range=ref_range,
-                ))
+                results.append(
+                    ParsedBiomarker(
+                        test_name=name_match.group(0).strip(),
+                        canonical_name=bio_key,
+                        value=value,
+                        value_raw=value_str,
+                        unit=unit.strip(),
+                        reference_range=ref_range,
+                    )
+                )
                 break  # Take first match per biomarker
 
         return results
 
     def _extract_reference_range(self, text: str, start_pos: int = 0) -> str:
         """Extract reference range string from text after the value."""
-        search_text = text[start_pos:start_pos + 80]
+        search_text = text[start_pos : start_pos + 80]
         # Look for patterns like "13.0 - 17.0", "< 200", "(70-100)"
         ref_match = _REF_RANGE_PATTERN.search(search_text)
         if ref_match:

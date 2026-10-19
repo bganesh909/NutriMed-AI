@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Optional
 
 from app.medical_parser import ParsedBiomarker
 
@@ -20,12 +19,14 @@ logger = logging.getLogger(__name__)
 # Reference range definitions (typical Indian adult ranges)
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class ReferenceInfo:
     """Default reference range and unit for a biomarker."""
+
     unit: str
-    low: Optional[float] = None
-    high: Optional[float] = None
+    low: float | None = None
+    high: float | None = None
 
     @property
     def range_str(self) -> str:
@@ -38,7 +39,18 @@ class ReferenceInfo:
         return ""
 
 
-def _evaluate_status(value: Optional[float], ref: ReferenceInfo) -> str:
+# A parenthetical assay qualifier immediately after the test name, e.g. the
+# "(25-OH)" in "Vitamin D (25-OH)   14.5   ng/mL". Its digits must not be
+# mistaken for the result.
+_ASSAY_QUALIFIER_RE = re.compile(r"^\s*\([^)]*\)")
+
+
+def _skip_assay_qualifier(text: str) -> str:
+    """Drop a leading parenthetical qualifier so value scanning starts after it."""
+    return _ASSAY_QUALIFIER_RE.sub("", text, count=1)
+
+
+def _evaluate_status(value: float | None, ref: ReferenceInfo) -> str:
     """Determine if a value is normal, low, or high relative to reference."""
     if value is None:
         return "unknown"
@@ -54,6 +66,7 @@ def _evaluate_status(value: Optional[float], ref: ReferenceInfo) -> str:
 # ---------------------------------------------------------------------------
 # Base parser
 # ---------------------------------------------------------------------------
+
 
 class BaseReportParser:
     """Base class for all report-type parsers.
@@ -82,9 +95,7 @@ class BaseReportParser:
     REFERENCES: dict[str, ReferenceInfo] = {}
 
     # Common reference-range pattern found after the value
-    _REF_RANGE_RE = re.compile(
-        r"[\(\[]?\s*(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)\s*[\)\]]?"
-    )
+    _REF_RANGE_RE = re.compile(r"[\(\[]?\s*(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)\s*[\)\]]?")
 
     def parse(self, text: str) -> list[ParsedBiomarker]:
         """Extract all markers this parser knows about from the text."""
@@ -108,7 +119,7 @@ class BaseReportParser:
         canonical: str,
         name_pat: str,
         val_pat: str,
-    ) -> Optional[ParsedBiomarker]:
+    ) -> ParsedBiomarker | None:
         """Search for a single marker across the text."""
 
         # Strategy 1: Line-by-line (tabular format)
@@ -117,7 +128,7 @@ class BaseReportParser:
             if not name_m:
                 continue
 
-            remainder = line[name_m.end():]
+            remainder = _skip_assay_qualifier(line[name_m.end() :])
             val_m = re.search(val_pat, remainder, re.IGNORECASE)
             if not val_m:
                 # Also try the whole line (value might be before name in some formats)
@@ -129,9 +140,9 @@ class BaseReportParser:
 
         # Strategy 2: Full-text search with proximity
         for name_m in re.finditer(name_pat, full_text, re.IGNORECASE):
-            window = full_text[name_m.end():name_m.end() + 120]
+            window = full_text[name_m.end() : name_m.end() + 120]
             # Skip separator characters
-            window_clean = re.sub(r"^[\s:=|]+", "", window)
+            window_clean = re.sub(r"^[\s:=|]+", "", _skip_assay_qualifier(window))
             val_m = re.search(val_pat, window_clean, re.IGNORECASE)
             if val_m:
                 return self._build_result(canonical, name_m, val_m, window_clean)
@@ -163,7 +174,7 @@ class BaseReportParser:
 
         # Extract reference range from context
         ref_range = ""
-        ref_range_m = self._REF_RANGE_RE.search(context[val_match.end():])
+        ref_range_m = self._REF_RANGE_RE.search(context[val_match.end() :])
         if ref_range_m:
             ref_range = f"{ref_range_m.group(1)} - {ref_range_m.group(2)}"
         elif ref:
@@ -190,12 +201,13 @@ class BaseReportParser:
 # CBC Parser
 # ---------------------------------------------------------------------------
 
+
 class CBCParser(BaseReportParser):
     """Parse Complete Blood Count reports."""
 
     MARKERS = {
         "hemoglobin": [
-            r"h[ae]moglobin|hgb|hb(?:\s*%)?",
+            r"ha?emoglobin|hgb|hb(?:\s*%)?",
             r"(\d+\.?\d*)\s*(g/dL|gm/dl|g%|gm%)?",
         ],
         "rbc": [
@@ -284,6 +296,7 @@ class CBCParser(BaseReportParser):
 # Lipid Profile Parser
 # ---------------------------------------------------------------------------
 
+
 class LipidProfileParser(BaseReportParser):
     """Parse Lipid Profile reports."""
 
@@ -332,6 +345,7 @@ class LipidProfileParser(BaseReportParser):
 # ---------------------------------------------------------------------------
 # Liver Function Test (LFT) Parser
 # ---------------------------------------------------------------------------
+
 
 class LFTParser(BaseReportParser):
     """Parse Liver Function Test reports."""
@@ -402,6 +416,7 @@ class LFTParser(BaseReportParser):
 # Kidney Function Test (KFT) Parser
 # ---------------------------------------------------------------------------
 
+
 class KFTParser(BaseReportParser):
     """Parse Kidney Function Test / Renal Function Test reports."""
 
@@ -466,6 +481,7 @@ class KFTParser(BaseReportParser):
 # Thyroid Parser
 # ---------------------------------------------------------------------------
 
+
 class ThyroidParser(BaseReportParser):
     """Parse Thyroid Function Test reports (TSH, T3, T4)."""
 
@@ -504,6 +520,7 @@ class ThyroidParser(BaseReportParser):
 # ---------------------------------------------------------------------------
 # Vitamin Parser
 # ---------------------------------------------------------------------------
+
 
 class VitaminParser(BaseReportParser):
     """Parse Vitamin and mineral reports (Vitamin D, B12, Iron, Ferritin)."""
@@ -553,6 +570,7 @@ class VitaminParser(BaseReportParser):
 # ---------------------------------------------------------------------------
 # Diabetes Parser
 # ---------------------------------------------------------------------------
+
 
 class DiabetesParser(BaseReportParser):
     """Parse Diabetes-related reports (Glucose, HbA1c)."""
@@ -616,7 +634,7 @@ PARSER_REGISTRY: dict[str, BaseReportParser] = {
 ALL_PARSERS: list[BaseReportParser] = list(PARSER_REGISTRY.values())
 
 
-def get_parser(report_type: str) -> Optional[BaseReportParser]:
+def get_parser(report_type: str) -> BaseReportParser | None:
     """Look up a parser by report type string."""
     return PARSER_REGISTRY.get(report_type.lower())
 
@@ -631,3 +649,39 @@ def run_all_parsers(text: str) -> list[ParsedBiomarker]:
                 results.append(bio)
                 seen.add(bio.canonical_name)
     return results
+
+
+# ---------------------------------------------------------------------------
+# Cross-parser status evaluation
+# ---------------------------------------------------------------------------
+
+#: Every canonical marker any parser knows a reference range for.
+MERGED_REFERENCES: dict[str, ReferenceInfo] = {}
+for _parser in ALL_PARSERS:
+    for _name, _ref in _parser.REFERENCES.items():
+        MERGED_REFERENCES.setdefault(_name, _ref)
+
+_PRINTED_RANGE_RE = re.compile(r"^\s*(-?\d+\.?\d*)\s*(?:-|–|to)\s*(-?\d+\.?\d*)\s*$", re.IGNORECASE)
+
+
+def evaluate_status_for(bio: ParsedBiomarker) -> str:
+    """
+    Classify a biomarker as low / high / normal, whichever parser produced it.
+
+    The reference range printed on the report itself wins, since it reflects the
+    issuing lab's assay. Falls back to the merged parser references, then
+    "unknown" when nothing is known -- never silently "normal".
+    """
+    if bio.value is None:
+        return "unknown"
+
+    printed = _PRINTED_RANGE_RE.match(bio.reference_range or "")
+    if printed:
+        low, high = float(printed.group(1)), float(printed.group(2))
+        if low <= high:
+            return _evaluate_status(bio.value, ReferenceInfo(unit=bio.unit or "", low=low, high=high))
+
+    ref = MERGED_REFERENCES.get(bio.canonical_name)
+    if ref:
+        return _evaluate_status(bio.value, ref)
+    return "unknown"

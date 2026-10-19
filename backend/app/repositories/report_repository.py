@@ -1,5 +1,4 @@
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.repositories.base import BaseRepository
 
@@ -10,12 +9,10 @@ class ReportRepository(BaseRepository):
     async def create(self, report_doc: dict) -> dict:
         return await self.insert_one(report_doc)
 
-    async def get_by_id(self, report_id: str) -> Optional[dict]:
+    async def get_by_id(self, report_id: str) -> dict | None:
         return await self.find_by_id(report_id)
 
-    async def get_by_user(
-        self, user_id: str, skip: int = 0, limit: int = 50
-    ) -> list[dict]:
+    async def get_by_user(self, user_id: str, skip: int = 0, limit: int = 50) -> list[dict]:
         return await self.find_many(
             {"user_id": user_id},
             sort=[("created_at", -1)],
@@ -23,12 +20,10 @@ class ReportRepository(BaseRepository):
             limit=limit,
         )
 
-    async def update_status(
-        self, report_id: str, status: str, analysis_result: dict | None = None
-    ) -> Optional[dict]:
+    async def update_status(self, report_id: str, status: str, analysis_result: dict | None = None) -> dict | None:
         update: dict = {
             "status": status,
-            "updated_at": datetime.now(timezone.utc),
+            "updated_at": datetime.now(UTC),
         }
         if analysis_result is not None:
             update["analysis_result"] = analysis_result

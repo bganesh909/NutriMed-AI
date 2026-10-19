@@ -5,8 +5,10 @@ Main API v1 router -- aggregates all endpoint routers with proper prefixes and t
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import (
+    admin,
     auth,
     fitness,
+    notifications,
     nutrition,
     pdf,
     progress,
@@ -25,3 +27,5 @@ api_v1_router.include_router(fitness.router, tags=["Fitness"])
 api_v1_router.include_router(recommendations.router, tags=["Recommendations"])
 api_v1_router.include_router(progress.router, tags=["Progress"])
 api_v1_router.include_router(pdf.router, tags=["PDF"])
+api_v1_router.include_router(notifications.router, tags=["Notifications"])
+api_v1_router.include_router(admin.router, tags=["Admin"])

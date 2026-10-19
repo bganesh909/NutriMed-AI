@@ -1,8 +1,9 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { NutritionCalc, DietPlan } from "@/types";
+import type { WireDietPlan } from "@/lib/diet-plan";
 
 interface NutritionPayload {
   age: number;
@@ -13,11 +14,12 @@ interface NutritionPayload {
   goal: string;
 }
 
+/** Matches GenerateDietRequest in the API (app/api/v1/endpoints/nutrition.py). */
 interface DietPayload {
-  preference: string;
   goal: string;
+  /** A DIET_PREFERENCES value selects which foods the plan may use. */
+  dietary_restrictions: string[];
   allergies: string[];
-  calories?: number;
 }
 
 export function useCalculateNutrition() {
@@ -33,12 +35,28 @@ export function useCalculateNutrition() {
 }
 
 export function useGenerateDiet() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: async (payload: DietPayload) => {
       const { data } = await api.post<DietPlan>(
         "/nutrition/generate-diet",
         payload
       );
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dietPlans"] });
+    },
+  });
+}
+
+/** Saved diet plans, newest first, as stored (convert with toDietPlan). */
+export function useDietPlans() {
+  return useQuery({
+    queryKey: ["dietPlans"],
+    queryFn: async () => {
+      const { data } = await api.get<WireDietPlan[]>("/nutrition/diet-plans");
       return data;
     },
   });

@@ -1,17 +1,16 @@
-from datetime import datetime, timezone
-from enum import Enum
-from typing import List, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class Gender(str, Enum):
+class Gender(StrEnum):
     MALE = "male"
     FEMALE = "female"
     OTHER = "other"
 
 
-class ActivityLevel(str, Enum):
+class ActivityLevel(StrEnum):
     SEDENTARY = "sedentary"
     LIGHTLY_ACTIVE = "lightly_active"
     MODERATELY_ACTIVE = "moderately_active"
@@ -19,25 +18,27 @@ class ActivityLevel(str, Enum):
     EXTRA_ACTIVE = "extra_active"
 
 
-class UserRole(str, Enum):
+class UserRole(StrEnum):
     USER = "user"
     ADMIN = "admin"
 
 
 class UserModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     name: str
     email: str
     hashed_password: str
-    age: Optional[int] = None
-    gender: Optional[Gender] = None
-    weight: Optional[float] = None
-    height: Optional[float] = None
-    activity_level: Optional[ActivityLevel] = None
-    goals: List[str] = Field(default_factory=list)
+    age: int | None = None
+    gender: Gender | None = None
+    weight: float | None = None
+    height: float | None = None
+    activity_level: ActivityLevel | None = None
+    goals: list[str] = Field(default_factory=list)
     role: UserRole = UserRole.USER
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # When the user accepted the terms of use and medical disclaimer at sign-up.
+    terms_accepted_at: datetime | None = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

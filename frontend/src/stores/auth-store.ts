@@ -1,59 +1,65 @@
 import { create } from "zustand";
+import { clearTokens, getAccessToken, setTokens } from "@/lib/auth-tokens";
 import type { User } from "@/types";
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
-  login: (user: User | null, token: string) => void;
+  /** True once the saved session has been read from localStorage. */
+  hydrated: boolean;
+  /** Load the saved session. Called once, after the first client render. */
+  hydrate: () => void;
+  login: (user: User | null, token: string, refreshToken?: string) => void;
   logout: () => void;
   setUser: (user: User) => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => {
-  let initialToken: string | null = null;
-  let initialUser: User | null = null;
+/**
+ * The store starts empty on the server AND on the client: reading
+ * localStorage during the first render would make the client markup differ
+ * from the server's and fail hydration. `AuthHydrator` (providers.tsx) loads
+ * the saved session right after the first render instead.
+ */
+export const useAuthStore = create<AuthState>((set) => ({
+  user: null,
+  token: null,
+  isAuthenticated: false,
+  hydrated: false,
 
-  if (typeof window !== "undefined") {
-    initialToken = localStorage.getItem("token");
+  hydrate: () => {
+    const token = getAccessToken();
+    let user: User | null = null;
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       try {
-        initialUser = JSON.parse(storedUser);
+        user = JSON.parse(storedUser);
       } catch {
-        initialUser = null;
+        user = null;
       }
     }
-  }
+    set({ user, token, isAuthenticated: !!token, hydrated: true });
+  },
 
-  return {
-    user: initialUser,
-    token: initialToken,
-    isAuthenticated: !!initialToken,
+  login: (user: User | null, token: string, refreshToken?: string) => {
+    if (typeof window !== "undefined") {
+      // The refresh token is what keeps a session alive past the access
+      // token's 30-minute expiry; without it users are logged out mid-task.
+      setTokens(token, refreshToken);
+      if (user) localStorage.setItem("user", JSON.stringify(user));
+    }
+    set({ user, token, isAuthenticated: true, hydrated: true });
+  },
 
-    login: (user: User | null, token: string) => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("token", token);
-        if (user) localStorage.setItem("user", JSON.stringify(user));
-        document.cookie = `token=${token}; path=/; max-age=${30 * 60}; SameSite=Lax`;
-      }
-      set({ user, token, isAuthenticated: true });
-    },
+  logout: () => {
+    clearTokens();
+    set({ user: null, token: null, isAuthenticated: false });
+  },
 
-    logout: () => {
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        document.cookie = "token=; path=/; max-age=0";
-      }
-      set({ user: null, token: null, isAuthenticated: false });
-    },
-
-    setUser: (user: User) => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("user", JSON.stringify(user));
-      }
-      set({ user });
-    },
-  };
-});
+  setUser: (user: User) => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+    set({ user });
+  },
+}));

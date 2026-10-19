@@ -8,8 +8,7 @@ chains to the analysis task.
 
 import logging
 import re
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from bson import ObjectId
 from pymongo import MongoClient
@@ -155,13 +154,20 @@ def extract_biomarkers(self, report_id: str):
         biomarker_doc = {
             "user_id": user_id,
             "report_id": report_id,
-            "extracted_at": datetime.now(timezone.utc),
+            "extracted_at": datetime.now(UTC),
         }
         biomarker_doc.update(markers)
 
-        # Insert into biomarkers collection
-        insert_result = db.biomarkers.insert_one(biomarker_doc)
-        biomarker_id = str(insert_result.inserted_id)
+        # Upsert into the biomarkers collection. report_id carries a unique
+        # index, so re-running analysis on the same report must replace the
+        # existing row rather than insert a duplicate.
+        db.biomarkers.replace_one(
+            {"report_id": report_id},
+            biomarker_doc,
+            upsert=True,
+        )
+        stored = db.biomarkers.find_one({"report_id": report_id}, {"_id": 1})
+        biomarker_id = str(stored["_id"]) if stored else ""
 
         logger.info(
             "Extracted %d biomarkers for report %s (biomarker_id=%s)",
@@ -178,7 +184,7 @@ def extract_biomarkers(self, report_id: str):
                     "status": "extracted",
                     "biomarker_id": biomarker_id,
                     "extracted_markers": list(markers.keys()),
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
@@ -196,8 +202,8 @@ def extract_biomarkers(self, report_id: str):
                 "$set": {
                     "status": "failed",
                     "error": str(exc),
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc

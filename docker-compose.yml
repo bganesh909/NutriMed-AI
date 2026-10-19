@@ -8,6 +8,7 @@ services:
     env_file: .env
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral:7b}
       OCR_SERVICE_URL: http://ocr-service:8001
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes: ["./backend:/app", "./uploads:/app/uploads"]
@@ -28,6 +29,7 @@ services:
     env_file: .env
     environment:
       OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-mistral:7b}
       OCR_SERVICE_URL: http://ocr-service:8001
       CELERY_BROKER_URL: redis://redis:6379/1
     volumes: ["./backend:/app", "./uploads:/app/uploads"]
@@ -114,52 +116,6 @@ services:
   ocr-service:
     build: ./services/ocr-service
     ports: ["8001:8001"]
-    restart: unless-stopped
-    env_file: .env
-    networks:
-      - nutrimed-network
-
-  llm-service:
-    build: ./services/llm-service
-    ports: ["8002:8002"]
-    depends_on: [ollama]
-    environment:
-      OLLAMA_BASE_URL: http://ollama:11434
-    restart: unless-stopped
-    env_file: .env
-    networks:
-      - nutrimed-network
-
-  nutrition-service:
-    build: ./services/nutrition-service
-    ports: ["8003:8003"]
-    depends_on: [llm-service]
-    restart: unless-stopped
-    env_file: .env
-    networks:
-      - nutrimed-network
-
-  fitness-service:
-    build: ./services/fitness-service
-    ports: ["8004:8004"]
-    depends_on: [llm-service]
-    restart: unless-stopped
-    env_file: .env
-    networks:
-      - nutrimed-network
-
-  pdf-service:
-    build: ./services/pdf-service
-    ports: ["8005:8005"]
-    restart: unless-stopped
-    env_file: .env
-    networks:
-      - nutrimed-network
-
-  rag-service:
-    build: ./services/rag-service
-    ports: ["8006:8006"]
-    volumes: ["./shared/knowledge_base:/app/knowledge_base"]
     restart: unless-stopped
     env_file: .env
     networks:

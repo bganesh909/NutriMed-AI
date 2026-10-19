@@ -1,12 +1,12 @@
-from typing import Callable
+from collections.abc import Callable
 
+import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-import jwt
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.database import get_database
-from app.core.security import verify_access_token
+from app.core.security import token_predates_password_change, verify_access_token
 
 _bearer_scheme = HTTPBearer()
 
@@ -14,6 +14,7 @@ _bearer_scheme = HTTPBearer()
 # ---------------------------------------------------------------------------
 # Database dependency
 # ---------------------------------------------------------------------------
+
 
 async def get_db() -> AsyncIOMotorDatabase:
     return get_database()
@@ -23,6 +24,7 @@ async def get_db() -> AsyncIOMotorDatabase:
 # Current user dependency
 # ---------------------------------------------------------------------------
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(_bearer_scheme),
     db: AsyncIOMotorDatabase = Depends(get_db),
@@ -31,16 +33,16 @@ async def get_current_user(
     token = credentials.credentials
     try:
         payload = verify_access_token(token)
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token has expired",
-        )
-    except jwt.PyJWTError:
+        ) from exc
+    except jwt.PyJWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication token",
-        )
+        ) from exc
 
     user_id = payload.get("sub")
     if user_id is None:
@@ -58,6 +60,12 @@ async def get_current_user(
             detail="User not found",
         )
 
+    if token_predates_password_change(payload, user):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session ended by a password change. Please sign in again.",
+        )
+
     user["id"] = str(user.pop("_id"))
     return user
 
@@ -65,6 +73,7 @@ async def get_current_user(
 # ---------------------------------------------------------------------------
 # Role-based access dependency
 # ---------------------------------------------------------------------------
+
 
 def require_role(role: str) -> Callable:
     """Return a dependency that checks the current user has the required role."""
