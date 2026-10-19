@@ -18,6 +18,15 @@ function browser(): boolean {
   return typeof window !== "undefined";
 }
 
+/**
+ * Over HTTPS the cookie is Secure, so the token is never sent on a plain-HTTP
+ * request (such as a first visit to http:// before nginx redirects it).
+ */
+function cookieAttributes(maxAge: number): string {
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  return `path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
+}
+
 export function getAccessToken(): string | null {
   return browser() ? localStorage.getItem(ACCESS_KEY) : null;
 }
@@ -30,7 +39,7 @@ export function setTokens(accessToken: string, refreshToken?: string | null): vo
   if (!browser()) return;
   localStorage.setItem(ACCESS_KEY, accessToken);
   if (refreshToken) localStorage.setItem(REFRESH_KEY, refreshToken);
-  document.cookie = `${ACCESS_KEY}=${accessToken}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}; SameSite=Lax`;
+  document.cookie = `${ACCESS_KEY}=${accessToken}; ${cookieAttributes(COOKIE_MAX_AGE_SECONDS)}`;
 }
 
 export function clearTokens(): void {
@@ -38,5 +47,5 @@ export function clearTokens(): void {
   localStorage.removeItem(ACCESS_KEY);
   localStorage.removeItem(REFRESH_KEY);
   localStorage.removeItem(USER_KEY);
-  document.cookie = `${ACCESS_KEY}=; path=/; max-age=0`;
+  document.cookie = `${ACCESS_KEY}=; ${cookieAttributes(0)}`;
 }

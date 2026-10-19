@@ -1,0 +1,9 @@
+# For servers without an NVIDIA GPU: run the model on the CPU.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.cpu.yml up -d
+#
+# Expect diet and workout plans to take minutes, and diet plans to often fall
+# back to the template generator when the model exceeds LLM_TIMEOUT_SECONDS.
+services:
+  ollama:
+    deploy: !reset {}

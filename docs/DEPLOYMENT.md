@@ -1,533 +1,252 @@
 # NutriMed AI -- Production Deployment Guide
 
-## Overview
+NutriMed AI runs on a single Linux server with Docker Compose, behind nginx
+with a Let's Encrypt certificate. GitHub Actions builds the images and deploys
+over SSH.
 
-This guide covers deploying NutriMed AI to a production environment using Docker Compose with SSL, monitoring, and backups.
+## 1. What runs where
 
-## Prerequisites
-
-- A Linux server (Ubuntu 22.04+ recommended) with at least 16 GB RAM
-- Domain name with DNS pointing to the server
-- Docker and Docker Compose installed
-- SSL certificate (or use Let's Encrypt)
-
-## 1. Docker Compose Production Configuration
-
-Create `docker-compose.prod.yml`:
-
-```yaml
-version: "3.9"
-
-services:
-  api-gateway:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    ports: []  # No direct port exposure; Nginx handles routing
-    depends_on:
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    env_file: .env.production
-    volumes:
-      - uploads_data:/app/uploads
-    command: >
-      gunicorn app.main:app
-      --worker-class uvicorn.workers.UvicornWorker
-      --workers 4
-      --bind 0.0.0.0:8000
-      --timeout 120
-      --access-logfile -
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 2G
-    networks:
-      - nutrimed-internal
-
-  celery-worker:
-    build: ./backend
-    depends_on:
-      mongo:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    env_file: .env.production
-    volumes:
-      - uploads_data:/app/uploads
-    command: celery -A app.core.celery_app worker -l warning -Q reports,ai,notifications -c 4
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 2G
-    networks:
-      - nutrimed-internal
-
-  celery-beat:
-    build: ./backend
-    depends_on:
-      redis:
-        condition: service_healthy
-    env_file: .env.production
-    command: celery -A app.core.celery_app beat -l warning
-    restart: always
-    networks:
-      - nutrimed-internal
-
-  mongo:
-    image: mongo:7
-    volumes:
-      - mongo_data:/data/db
-      - ./infrastructure/mongo/mongod.conf:/etc/mongod.conf:ro
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
-    command: mongod --config /etc/mongod.conf --auth
-    restart: always
-    healthcheck:
-      test: ["CMD", "mongosh", "-u", "${MONGO_ROOT_USER}", "-p", "${MONGO_ROOT_PASSWORD}", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    deploy:
-      resources:
-        limits:
-          cpus: "2.0"
-          memory: 4G
-    networks:
-      - nutrimed-internal
-
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    command: >
-      redis-server
-      --appendonly yes
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD}
-    restart: always
-    healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    networks:
-      - nutrimed-internal
-
-  rabbitmq:
-    image: rabbitmq:3-management
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    restart: always
-    healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-    networks:
-      - nutrimed-internal
-
-  ollama:
-    image: ollama/ollama:latest
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: always
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - capabilities: [gpu]
-        limits:
-          memory: 8G
-    networks:
-      - nutrimed-internal
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        NEXT_PUBLIC_API_URL: https://${DOMAIN}/api/v1
-    restart: always
-    networks:
-      - nutrimed-internal
-
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./infrastructure/nginx/production.conf:/etc/nginx/nginx.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - certbot_webroot:/var/www/certbot:ro
-    depends_on:
-      - api-gateway
-      - frontend
-    restart: always
-    networks:
-      - nutrimed-internal
-
-volumes:
-  mongo_data:
-  redis_data:
-  rabbitmq_data:
-  ollama_data:
-  uploads_data:
-  certbot_webroot:
-
-networks:
-  nutrimed-internal:
-    driver: bridge
-```
-
-## 2. Production Environment Variables
-
-Create `.env.production`:
+`docker-compose.yml` is the development setup; `docker-compose.prod.yml` layers
+the production settings on top of it. Always pass both files:
 
 ```bash
-# Application
-APP_NAME=NutriMed AI
-DEBUG=false
-
-# Domain
-DOMAIN=nutrimed.example.com
-
-# MongoDB
-MONGO_URI=mongodb://nutrimed_user:STRONG_PASSWORD_HERE@mongo:27017/nutrimed_ai?authSource=admin
-MONGO_DB_NAME=nutrimed_ai
-MONGO_ROOT_USER=admin
-MONGO_ROOT_PASSWORD=CHANGE_THIS_STRONG_PASSWORD
-
-# Redis
-REDIS_URL=redis://:REDIS_PASSWORD_HERE@redis:6379/0
-REDIS_PASSWORD=CHANGE_THIS_REDIS_PASSWORD
-
-# RabbitMQ
-RABBITMQ_URL=amqp://nutrimed:RABBITMQ_PASSWORD@rabbitmq:5672//
-RABBITMQ_USER=nutrimed
-RABBITMQ_PASSWORD=CHANGE_THIS_RABBITMQ_PASSWORD
-
-# JWT -- generate with: python -c "import secrets; print(secrets.token_urlsafe(64))"
-JWT_SECRET=GENERATE_A_STRONG_SECRET_HERE
-JWT_ALGORITHM=HS256
-JWT_EXPIRY_MINUTES=30
-
-# AES -- generate with: python -c "import secrets; print(secrets.token_urlsafe(32))"
-# Keep it stable: uploaded reports are encrypted with it, and changing it makes
-# existing uploads unreadable.
-AES_KEY=GENERATE_A_STRONG_AES_KEY_HERE
-# With DEBUG=false the API refuses to start if JWT_SECRET or AES_KEY is a
-# placeholder, shorter than 32 characters, or the two are the same value.
-
-# Ollama
-OLLAMA_BASE_URL=http://ollama:11434
-
-# CORS
-ALLOWED_ORIGINS=["https://nutrimed.example.com"]
+docker compose -f docker-compose.yml -f docker-compose.prod.yml <command>
 ```
 
-## 3. SSL/TLS Setup with Let's Encrypt
+| Service | Role | Reachable from the internet |
+|---|---|---|
+| nginx | TLS, routing (`/api` and `/health` to the API, everything else to the app), rate limits | **Yes, ports 80 and 443 only** |
+| frontend | Next.js app | No |
+| api-gateway | FastAPI | No (only through nginx) |
+| celery-worker | Report pipeline and on-request plans | No |
+| ocr-service | Text extraction from reports | No |
+| ollama | Local LLM (GPU) | No |
+| mongo | Database, with a root user from `.env` | No |
+| redis | Celery broker, rate limiting | No |
 
-### Initial certificate
+Uploaded reports are stored, encrypted with `AES_KEY`, in the `uploads_data`
+volume shared by the API and the worker. RabbitMQ and celery-beat are not
+started in production (Celery uses Redis; there are no periodic tasks).
+
+## 2. Prerequisites
+
+- **Server:** Ubuntu 22.04 or 24.04 with an NVIDIA GPU (for example AWS
+  `g4dn.xlarge`, GCP `g2-standard-4`, Azure `NC4as_T4_v3`), 16 GB RAM, 4 vCPUs,
+  50 GB+ disk. Pick a region that meets your data-residency obligations.
+  Without a GPU the app still works, but plans take minutes and diet plans often
+  fall back to templates (see section 5).
+- **Docker Engine** with the **Compose plugin v2.24.4 or newer**
+  ([install guide](https://docs.docker.com/engine/install/ubuntu/)).
+- **GPU servers:** the NVIDIA driver and the
+  [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html).
+  Check with `sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi`.
+- **A domain** with an A record pointing at the server.
+- **An email provider** with SMTP access (Amazon SES, Postmark, SendGrid, ...)
+  for password-reset emails.
+
+Firewall: allow SSH, 80 and 443 only.
 
 ```bash
-# Install certbot
-sudo apt-get install certbot
-
-# Get initial certificate
-sudo certbot certonly --standalone -d nutrimed.example.com
-
-# Certificate files will be at:
-#   /etc/letsencrypt/live/nutrimed.example.com/fullchain.pem
-#   /etc/letsencrypt/live/nutrimed.example.com/privkey.pem
+sudo ufw allow OpenSSH && sudo ufw allow 80,443/tcp && sudo ufw enable
 ```
 
-### Auto-renewal
+## 3. Configure
 
 ```bash
-# Add to crontab
-sudo crontab -e
-
-# Renew twice daily, reload nginx after renewal
-0 0,12 * * * certbot renew --quiet --deploy-hook "docker compose -f /path/to/docker-compose.prod.yml restart nginx"
+sudo mkdir -p /opt/nutrimed-ai && sudo chown "$USER" /opt/nutrimed-ai
+git clone https://github.com/bganesh909/NutriMed-AI.git /opt/nutrimed-ai
+cd /opt/nutrimed-ai
+cp .env.example .env
+chmod 600 .env
 ```
 
-## 4. Nginx Configuration
+Edit `.env`. Generate each secret with
+`python3 -c "import secrets; print(secrets.token_urlsafe(48))"`.
 
-Create `infrastructure/nginx/production.conf`:
+| Variable | Value |
+|---|---|
+| `DEBUG` | `false` (the production file forces it off anyway) |
+| `JWT_SECRET`, `AES_KEY` | Two different generated values. With `DEBUG=false` the API refuses to start on placeholders, values under 32 characters, or identical values. |
+| `DOMAIN` | `app.example.com` (no `https://`) |
+| `MONGO_ROOT_USERNAME`, `MONGO_ROOT_PASSWORD` | Database root user. URL-safe characters only; the API's `MONGO_URI` is built from them. |
+| `ALLOWED_ORIGINS` | `["https://app.example.com"]` (a JSON list) |
+| `FRONTEND_URL` | `https://app.example.com` |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | From your email provider |
+| `OLLAMA_MODEL` | `mistral:7b` unless you choose another model |
 
-```nginx
-worker_processes auto;
+> **Keep `AES_KEY` and `JWT_SECRET` in a password manager.** Uploaded reports
+> are encrypted with `AES_KEY`; if it is lost or changed, they cannot be read.
 
-events {
-    worker_connections 1024;
-}
+## 4. TLS certificate
 
-http {
-    include       /etc/nginx/mime.types;
-    default_type  application/octet-stream;
-
-    sendfile    on;
-    tcp_nopush  on;
-    tcp_nodelay on;
-
-    keepalive_timeout 65;
-    client_max_body_size 50M;
-
-    # Rate limiting
-    limit_req_zone $binary_remote_addr zone=api:10m rate=30r/s;
-    limit_req_zone $binary_remote_addr zone=auth:10m rate=5r/m;
-
-    # Gzip
-    gzip on;
-    gzip_types text/plain text/css application/json application/javascript text/xml;
-
-    # Redirect HTTP to HTTPS
-    server {
-        listen 80;
-        server_name nutrimed.example.com;
-
-        location /.well-known/acme-challenge/ {
-            root /var/www/certbot;
-        }
-
-        location / {
-            return 301 https://$host$request_uri;
-        }
-    }
-
-    # HTTPS server
-    server {
-        listen 443 ssl http2;
-        server_name nutrimed.example.com;
-
-        ssl_certificate     /etc/letsencrypt/live/nutrimed.example.com/fullchain.pem;
-        ssl_certificate_key /etc/letsencrypt/live/nutrimed.example.com/privkey.pem;
-        ssl_protocols       TLSv1.2 TLSv1.3;
-        ssl_ciphers         HIGH:!aNULL:!MD5;
-        ssl_prefer_server_ciphers on;
-
-        # Security headers
-        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-        add_header X-Frame-Options DENY always;
-        add_header X-Content-Type-Options nosniff always;
-        add_header X-XSS-Protection "1; mode=block" always;
-        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
-        # API
-        location /api/ {
-            limit_req zone=api burst=20 nodelay;
-            proxy_pass http://api-gateway:8000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-            proxy_read_timeout 120s;
-        }
-
-        # Auth endpoints with stricter rate limiting
-        location /api/v1/auth/ {
-            limit_req zone=auth burst=3 nodelay;
-            proxy_pass http://api-gateway:8000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-
-        # Health check
-        location /health {
-            proxy_pass http://api-gateway:8000;
-        }
-
-        # API docs (optional: disable in production)
-        location /docs {
-            return 404;
-        }
-        location /openapi.json {
-            return 404;
-        }
-
-        # Frontend
-        location / {
-            proxy_pass http://frontend:3000;
-            proxy_set_header Host $host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
-        }
-    }
-}
-```
-
-## 5. Backup Strategy
-
-### MongoDB automated backups
+Install certbot (the snap package is current; Ubuntu's apt package may be too
+old for `reconfigure`):
 
 ```bash
-#!/bin/bash
-# backup_mongo.sh -- run daily via cron
+sudo snap install --classic certbot
+sudo mkdir -p /var/www/certbot
+```
 
-BACKUP_DIR="/backups/mongo"
-DATE=$(date +%Y%m%d_%H%M%S)
-CONTAINER="nutrimed-ai-mongo-1"
+Get the first certificate **before** starting the stack, while port 80 is free:
 
+```bash
+sudo certbot certonly --standalone -d app.example.com -m you@example.com --agree-tos --no-eff-email
+```
+
+Once the stack is running (section 5), switch renewals to the webroot nginx
+serves, so they work without stopping nginx, and reload nginx after each
+renewal:
+
+```bash
+sudo certbot reconfigure --cert-name app.example.com --webroot --webroot-path /var/www/certbot
+sudo tee /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh > /dev/null <<'EOF'
+#!/bin/sh
+cd /opt/nutrimed-ai && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T nginx nginx -s reload
+EOF
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
+sudo certbot renew --dry-run
+```
+
+## 5. Start
+
+Either build the images on the server:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+or run the images the CD workflow pushed (section 8). Packages of a private
+repository need a registry login first, with a personal access token that has
+`read:packages`:
+
+```bash
+echo "$GHCR_TOKEN" | docker login ghcr.io -u <github-user> --password-stdin
+export IMAGE_TAG=<short commit SHA or version>
+docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+No GPU? Add `-f docker-compose.cpu.yml` to every command.
+
+Load the model (once; it is kept in the `ollama_data` volume):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec ollama ollama pull mistral:7b
+```
+
+Check it:
+
+```bash
+curl -fsS https://app.example.com/health
+curl -fsS https://app.example.com/health/ready   # mongodb, llm and ocr should be "ok"
+```
+
+## 6. Create the admin account
+
+**Never run the seed script (`seeds/seed_data.py`) in production:** it creates
+accounts whose passwords are published in the repository.
+
+Register normally at `https://app.example.com/register`, then promote that
+account (replace the email; `nutrimed` is `MONGO_DB_NAME`):
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec mongo sh -c \
+  'mongosh --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin nutrimed \
+   --eval "db.users.updateOne({email: \"you@example.com\"}, {\$set: {role: \"admin\"}})"'
+```
+
+Sign out and back in; the Admin console appears in the sidebar.
+
+## 7. Backups
+
+Back up the database **and** the uploaded reports, and copy the archives off
+the server (for example to object storage). Save as
+`/opt/nutrimed-ai/backup.sh` and run it daily from root's crontab
+(`0 2 * * * /opt/nutrimed-ai/backup.sh`):
+
+```bash
+#!/bin/sh
+set -e
+cd /opt/nutrimed-ai
+BACKUP_DIR=/var/backups/nutrimed
+STAMP=$(date +%Y%m%d_%H%M%S)
 mkdir -p "$BACKUP_DIR"
 
-docker exec "$CONTAINER" mongodump \
-  --username admin \
-  --password "$MONGO_ROOT_PASSWORD" \
-  --authenticationDatabase admin \
-  --db nutrimed_ai \
-  --out "/tmp/backup_$DATE"
+# Database: one compressed archive of all databases.
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mongo sh -c \
+  'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' \
+  > "$BACKUP_DIR/mongo_$STAMP.archive.gz"
 
-docker cp "$CONTAINER:/tmp/backup_$DATE" "$BACKUP_DIR/backup_$DATE"
-docker exec "$CONTAINER" rm -rf "/tmp/backup_$DATE"
+# Uploaded reports (still encrypted with AES_KEY). The volume is named
+# <project folder>_uploads_data; check with: docker volume ls
+docker run --rm -v nutrimed-ai_uploads_data:/data:ro -v "$BACKUP_DIR":/backup alpine \
+  tar czf "/backup/uploads_$STAMP.tar.gz" -C /data .
 
-# Compress
-tar -czf "$BACKUP_DIR/backup_$DATE.tar.gz" -C "$BACKUP_DIR" "backup_$DATE"
-rm -rf "$BACKUP_DIR/backup_$DATE"
-
-# Retain last 30 days
-find "$BACKUP_DIR" -name "*.tar.gz" -mtime +30 -delete
-
-echo "Backup completed: backup_$DATE.tar.gz"
+find "$BACKUP_DIR" -type f -mtime +30 -delete
 ```
 
-Add to crontab:
+Restore the database with
+`... exec -T mongo sh -c 'mongorestore -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip --drop' < mongo_<stamp>.archive.gz`,
+and uploads by extracting the tarball back into the volume. Redis holds only
+queues and rate-limit counters and needs no backup.
+
+## 8. Continuous deployment (GitHub Actions)
+
+`.github/workflows/cd.yml` builds the `api-gateway`, `frontend` and
+`ocr-service` images, pushes them to GHCR tagged with the short commit SHA,
+then deploys over SSH: it checks out that commit in `/opt/nutrimed-ai`, logs
+the server in to GHCR, and runs `pull` and `up -d` with that tag.
+
+- **Pushing a `v*` tag** deploys to staging; **Run workflow** (manual) deploys
+  to staging or production. Staging uses the same production files on its own
+  server with its own `.env`.
+- Per environment (Settings, Environments), set the secrets `<ENV>_HOST`,
+  `<ENV>_USER` and `<ENV>_SSH_KEY` (`<ENV>` is `STAGING` or `PRODUCTION`), the
+  variable `STAGING_URL` or `PRODUCTION_URL` (e.g. `https://app.example.com`),
+  and, for a server without a GPU, the variable `COMPOSE_EXTRA` set to
+  `-f docker-compose.cpu.yml`.
+- The server needs read access to the repository (for example a deploy key)
+  for `git fetch`.
+
+The workflow then checks `<URL>/health` for up to five minutes.
+
+**Rollback:** on the server, set `IMAGE_TAG` to an earlier commit's short SHA
+and run `pull` and `up -d` (section 5), or re-run an earlier workflow run.
+
+## 9. Monitoring and logs
 
 ```bash
-0 2 * * * /path/to/backup_mongo.sh >> /var/log/nutrimed-backup.log 2>&1
+docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
+docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api-gateway celery-worker
 ```
 
-### Redis backup
+- `https://app.example.com/health` for uptime monitoring (Uptime Kuma,
+  Healthchecks.io, ...); `/health/ready` reports degraded dependencies,
+  including a high share of template-fallback plans.
+- Container logs rotate at 10 MB, five files per service.
+- The API docs (`/docs`) are not routed through nginx, so they are not public.
 
-Redis AOF persistence is enabled by default in the compose file. For periodic snapshots:
+## 10. Scaling
+
+More API or worker processes on the same server:
 
 ```bash
-docker exec nutrimed-ai-redis-1 redis-cli -a "$REDIS_PASSWORD" BGSAVE
-docker cp nutrimed-ai-redis-1:/data/dump.rdb /backups/redis/dump_$(date +%Y%m%d).rdb
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --scale celery-worker=2
 ```
 
-## 6. Monitoring
+Plan generation is bound by the model: a second GPU (or a larger one) helps
+more than extra workers. For high availability, move MongoDB to a replica set
+or a managed service (MongoDB Atlas) and point the API at it.
 
-### Health checks
+## 11. Checklist
 
-The Docker Compose file includes built-in health checks. You can monitor externally:
-
-```bash
-# API health
-curl -f https://nutrimed.example.com/health
-
-# MongoDB
-docker exec nutrimed-ai-mongo-1 mongosh --eval "db.adminCommand('ping')"
-
-# Redis
-docker exec nutrimed-ai-redis-1 redis-cli -a "$REDIS_PASSWORD" ping
-
-# RabbitMQ
-curl -u nutrimed:password http://localhost:15672/api/healthchecks/node
-```
-
-### Log aggregation
-
-```bash
-# View logs for all services
-docker compose -f docker-compose.prod.yml logs -f
-
-# View logs for a specific service
-docker compose -f docker-compose.prod.yml logs -f api-gateway
-
-# Export logs to file
-docker compose -f docker-compose.prod.yml logs --no-color > /var/log/nutrimed-all.log
-```
-
-### Recommended monitoring stack
-
-For production, consider adding:
-
-- **Prometheus + Grafana** for metrics and dashboards
-- **Loki** for log aggregation
-- **Uptime Kuma** or **Healthchecks.io** for uptime monitoring
-- **Sentry** for error tracking (add `SENTRY_DSN` to `.env.production`)
-
-## 7. Scaling Considerations
-
-### Horizontal scaling
-
-```yaml
-# Scale API workers
-docker compose -f docker-compose.prod.yml up -d --scale api-gateway=3
-
-# Scale Celery workers
-docker compose -f docker-compose.prod.yml up -d --scale celery-worker=4
-```
-
-### MongoDB replica set
-
-For high availability, convert MongoDB to a replica set:
-
-```yaml
-mongo-primary:
-  image: mongo:7
-  command: mongod --replSet rs0 --auth
-  # ... configuration
-
-mongo-secondary:
-  image: mongo:7
-  command: mongod --replSet rs0 --auth
-  # ... configuration
-```
-
-### Redis Sentinel
-
-For Redis high availability:
-
-```yaml
-redis-sentinel:
-  image: redis:7-alpine
-  command: redis-sentinel /etc/sentinel.conf
-```
-
-### Load balancing
-
-When running multiple API instances, Nginx will round-robin by default. For session affinity (if needed):
-
-```nginx
-upstream api_backend {
-    ip_hash;
-    server api-gateway-1:8000;
-    server api-gateway-2:8000;
-    server api-gateway-3:8000;
-}
-```
-
-## 8. Deployment Checklist
-
-- [ ] Set strong passwords for all services in `.env.production`
-- [ ] Generate unique JWT_SECRET and AES_KEY (with DEBUG=false the API will not start on placeholders)
-- [ ] Configure SSL certificate
-- [ ] Set up automated backups
-- [ ] Configure firewall (only expose ports 80 and 443)
-- [ ] Set DEBUG=false
-- [ ] Disable /docs and /openapi.json endpoints
-- [ ] Configure CORS to only allow production domain
-- [ ] Set up monitoring and alerting
-- [ ] Pull required Ollama models
-- [ ] Run seed data script
-- [ ] Test all endpoints
-- [ ] Set up log rotation
+- [ ] GPU server (or `docker-compose.cpu.yml`), firewall open on 22/80/443 only
+- [ ] `.env` with generated `JWT_SECRET` and `AES_KEY`, both saved in a password manager
+- [ ] `DOMAIN`, `ALLOWED_ORIGINS` (JSON list), `FRONTEND_URL`, `MONGO_ROOT_*` set
+- [ ] SMTP configured; password-reset email arrives
+- [ ] TLS certificate issued; renewals switched to webroot; `certbot renew --dry-run` passes
+- [ ] Model pulled; `/health/ready` shows `llm`, `ocr` and `mongodb` ok
+- [ ] Admin account created by promotion (seed script **not** run)
+- [ ] Daily backups of MongoDB **and** uploads, copied off the server
+- [ ] Uptime monitoring on `/health`
+- [ ] `/legal` reviewed by a lawyer, with a real contact address

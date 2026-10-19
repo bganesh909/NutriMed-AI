@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   api-gateway:
     build: ./backend
@@ -122,11 +120,14 @@ services:
       - nutrimed-network
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      # Baked into the browser bundle at build time (a runtime environment
+      # variable would be ignored). Development calls the API's published port.
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     ports: ["3000:3000"]
     depends_on: [api-gateway]
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000/api/v1
     restart: unless-stopped
     networks:
       - nutrimed-network

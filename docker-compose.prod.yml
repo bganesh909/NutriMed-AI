@@ -1,0 +1,128 @@
+# Production overrides, layered on the development base file:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Needs Docker Compose v2.24.4+ (for !reset / !override) and a .env on the
+# server -- see docs/DEPLOYMENT.md. Compared with the base file:
+#   - only nginx is published (80/443). MongoDB, Redis, the API, the model and
+#     the OCR service are reachable only on the internal Docker network.
+#   - services run the images the CD workflow pushes to GHCR (or images built
+#     on the server with --build): no source mounts, no auto-reload.
+#   - DEBUG is forced off, so the API refuses to start on placeholder secrets.
+#   - uploads live in a named volume shared by the API and the worker.
+#   - MongoDB takes its credentials from .env and runs no seed scripts.
+#   - RabbitMQ and celery-beat are not started: Celery's broker is Redis and
+#     no periodic tasks are defined.
+#
+# Servers without an NVIDIA GPU: add -f docker-compose.cpu.yml.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "5"
+
+x-backend-env: &backend-env
+  DEBUG: "false"
+  # Built from the values that create the MongoDB root user, so the two cannot
+  # drift apart. Use URL-safe passwords (letters, digits, "-" and "_").
+  MONGO_URI: mongodb://${MONGO_ROOT_USERNAME:?set MONGO_ROOT_USERNAME in .env}:${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}@mongo:27017/?authSource=admin
+  MONGO_DB_NAME: ${MONGO_DB_NAME:-nutrimed}
+  REDIS_URL: redis://redis:6379/0
+
+services:
+  api-gateway:
+    image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-api-gateway:${IMAGE_TAG:-latest}
+    ports: !reset []
+    volumes: !override
+      - uploads_data:/app/uploads
+    environment: *backend-env
+    # Only nginx can reach the API, so its forwarded headers are trusted.
+    # Without them every visitor would share nginx's IP in the rate limiter.
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000",
+              "--workers", "2", "--proxy-headers", "--forwarded-allow-ips", "*"]
+    depends_on: !override
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *logging
+
+  celery-worker:
+    image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-api-gateway:${IMAGE_TAG:-latest}
+    volumes: !override
+      - uploads_data:/app/uploads
+    environment: *backend-env
+    command: ["celery", "-A", "app.core.celery_app", "worker", "-l", "info",
+              "-Q", "reports,ai,notifications", "-c", "2"]
+    depends_on: !override
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    logging: *logging
+
+  celery-beat:
+    # No periodic tasks are defined; enable with --profile scheduler if added.
+    profiles: ["scheduler"]
+    image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-api-gateway:${IMAGE_TAG:-latest}
+    volumes: !reset []
+    environment: *backend-env
+    depends_on: !override
+      - redis
+    logging: *logging
+
+  mongo:
+    ports: !reset []
+    volumes: !override
+      - mongo_data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:?set MONGO_ROOT_USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD in .env}
+    logging: *logging
+
+  redis:
+    ports: !reset []
+    logging: *logging
+
+  rabbitmq:
+    # Unused: Celery's broker is Redis (CELERY_BROKER_URL).
+    profiles: ["unused"]
+    ports: !reset []
+
+  ollama:
+    ports: !reset []
+    logging: *logging
+
+  ocr-service:
+    image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-ocr-service:${IMAGE_TAG:-latest}
+    ports: !reset []
+    logging: *logging
+
+  frontend:
+    image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-frontend:${IMAGE_TAG:-latest}
+    build:
+      args:
+        # Same-origin: nginx serves the API under /api.
+        NEXT_PUBLIC_API_URL: /api/v1
+    ports: !reset []
+    logging: *logging
+
+  nginx:
+    ports: !override
+      - "80:80"
+      - "443:443"
+    volumes: !override
+      - ./infrastructure/nginx/nginx.prod.conf.template:/etc/nginx/templates/nginx.conf.template:ro
+      - ./infrastructure/nginx/proxy_api.conf:/etc/nginx/proxy_api.conf:ro
+      - ${LETSENCRYPT_DIR:-/etc/letsencrypt}:/etc/letsencrypt:ro
+      - ${CERTBOT_WEBROOT:-/var/www/certbot}:/var/www/certbot:ro
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      # Render the template to /etc/nginx/nginx.conf, substituting only DOMAIN.
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
+      NGINX_ENVSUBST_FILTER: "^DOMAIN$$"
+    logging: *logging
+
+volumes:
+  uploads_data:
