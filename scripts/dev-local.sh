@@ -98,7 +98,8 @@ wait_http "http://localhost:8001/health" ocr 40
 
 # --- 4. Backend API (:8000) -------------------------------------------------
 if port_open 8000; then warn "port 8000 busy — assuming backend already running"
-else start_bg backend bash -c "cd '$ROOT/backend' && exec venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"; fi
+# DEBUG=true: with no mail server locally, password-reset emails go to logs/backend.log.
+else start_bg backend bash -c "cd '$ROOT/backend' && exec env DEBUG=true venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"; fi
 wait_http "http://localhost:8000/health" backend 40
 
 # --- 5. Celery worker -------------------------------------------------------

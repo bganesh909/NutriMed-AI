@@ -1,19 +1,19 @@
-from datetime import date as date_type, datetime, timezone
-from typing import Dict, Optional
+from datetime import UTC, datetime
+from datetime import date as date_type
 
 from pydantic import BaseModel, Field
 
 
 class ProgressModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
     date: date_type = Field(default_factory=lambda: date_type.today())
-    weight: Optional[float] = None
-    body_fat_pct: Optional[float] = None
-    measurements: Dict[str, float] = Field(default_factory=dict)
-    biomarker_snapshot: Dict[str, float] = Field(default_factory=dict)
+    weight: float | None = None
+    body_fat_pct: float | None = None
+    measurements: dict[str, float] = Field(default_factory=dict)
+    biomarker_snapshot: dict[str, float] = Field(default_factory=dict)
     notes: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

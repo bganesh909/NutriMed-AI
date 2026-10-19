@@ -33,16 +33,6 @@ jobs:
             context: ./frontend
           - name: ocr-service
             context: ./services/ocr-service
-          - name: llm-service
-            context: ./services/llm-service
-          - name: nutrition-service
-            context: ./services/nutrition-service
-          - name: fitness-service
-            context: ./services/fitness-service
-          - name: pdf-service
-            context: ./services/pdf-service
-          - name: rag-service
-            context: ./services/rag-service
     steps:
       - uses: actions/checkout@v4
 

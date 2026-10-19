@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 __all__ = ["NutritionCalculation"]
@@ -16,6 +14,6 @@ class NutritionCalculation(BaseModel):
     tdee: float
     bmi: float
     bmi_category: str
-    body_fat_estimate: Optional[float] = None
+    body_fat_estimate: float | None = None
     target_calories: float
     macros: MacroBreakdown

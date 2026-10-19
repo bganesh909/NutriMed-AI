@@ -84,8 +84,7 @@ async def extract_from_upload(file: UploadFile = File(...)):
         if ext not in {".jpg", ".jpeg", ".png", ".bmp", ".tiff", ".tif", ".webp", ".pdf"}:
             raise HTTPException(
                 status_code=400,
-                detail=f"Unsupported file type: {content_type}. "
-                       f"Accepted types: JPEG, PNG, BMP, TIFF, WebP, PDF.",
+                detail=f"Unsupported file type: {content_type}. Accepted types: JPEG, PNG, BMP, TIFF, WebP, PDF.",
             )
 
     # Read and validate size
@@ -93,7 +92,7 @@ async def extract_from_upload(file: UploadFile = File(...)):
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=413,
-            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)} MB.",
+            detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024 * 1024)} MB.",
         )
 
     if len(contents) == 0:
@@ -149,4 +148,11 @@ async def extract_from_base64(request: Base64ImageRequest):
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
-    return HealthResponse(status="ok", service="ocr-service", version="1.0.0")
+    from app.extractor import available_ocr_engine
+
+    return HealthResponse(
+        status="ok",
+        service="ocr-service",
+        version="1.0.0",
+        ocr_engine=available_ocr_engine(),
+    )

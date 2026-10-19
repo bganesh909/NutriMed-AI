@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
-from enum import Enum
-from typing import List, Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class DietPlanType(str, Enum):
+class DietPlanType(StrEnum):
     WEIGHT_LOSS = "weight_loss"
     MUSCLE_GAIN = "muscle_gain"
     MAINTENANCE = "maintenance"
@@ -18,30 +17,30 @@ class DietPlanType(str, Enum):
 class FoodItem(BaseModel):
     name: str
     quantity: str = ""
-    calories: Optional[float] = None
-    protein_g: Optional[float] = None
-    carbs_g: Optional[float] = None
-    fat_g: Optional[float] = None
+    calories: float | None = None
+    protein_g: float | None = None
+    carbs_g: float | None = None
+    fat_g: float | None = None
 
 
 class Meal(BaseModel):
     name: str
     time: str
-    foods: List[FoodItem] = Field(default_factory=list)
+    foods: list[FoodItem] = Field(default_factory=list)
 
 
 class DietPlanModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
     plan_type: DietPlanType
     calories: float
     protein_g: float
     carbs_g: float
     fat_g: float
-    meals: List[Meal] = Field(default_factory=list)
+    meals: list[Meal] = Field(default_factory=list)
     duration_weeks: int = 4
     notes: str = ""
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

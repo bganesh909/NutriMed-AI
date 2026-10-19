@@ -1,8 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, User, ChevronDown } from "lucide-react";
 import { useAuthStore } from "@/stores/auth-store";
+import { useLogout } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,28 +14,29 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MobileSidebar } from "./sidebar";
+import { NotificationsMenu } from "./notifications-menu";
+import { pageTitle } from "./nav";
 
 interface HeaderProps {
   title?: string;
 }
 
 export function Header({ title }: HeaderProps) {
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
   const router = useRouter();
-
-  const handleLogout = () => {
-    logout();
-    router.push("/login");
-  };
+  const pathname = usePathname();
+  const handleLogout = useLogout();
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-sm">
       <div className="flex h-16 items-center gap-4 px-4 sm:px-6">
         <MobileSidebar />
 
-        <h1 className="text-lg font-semibold text-slate-100 flex-1">
-          {title || "Dashboard"}
+        <h1 className="text-lg font-semibold text-slate-100 flex-1 truncate">
+          {title || pageTitle(pathname)}
         </h1>
+
+        <NotificationsMenu />
 
         <DropdownMenu>
           <DropdownMenuTrigger

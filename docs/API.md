@@ -6,7 +6,7 @@
 
 ## Authentication
 
-All endpoints except `/auth/register`, `/auth/login`, and `/health` require a JWT Bearer token.
+All endpoints except `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password` and `/health` require a JWT Bearer token.
 
 Include the token in the `Authorization` header:
 
@@ -121,6 +121,44 @@ Refresh an expired access token.
 
 ---
 
+### POST /auth/forgot-password
+
+Email a single-use password-reset link (valid for `PASSWORD_RESET_EXPIRY_MINUTES`, default 30). The response is the same whether or not the email is registered, so the endpoint cannot be used to discover accounts. Without `SMTP_HOST` no email is sent; with `DEBUG=true` it is written to the API log instead.
+
+**Request Body:** `{"email": "user@example.com"}`
+
+**Response (200):** `{"message": "If an account exists for that email, a reset link has been sent."}`
+
+---
+
+### POST /auth/reset-password
+
+Set a new password using the token from the reset link. The token works once, and every session issued before the reset is signed out.
+
+**Request Body:** `{"token": "<from the link>", "password": "NewPassword123"}`
+
+| Code | Description                          |
+|------|--------------------------------------|
+| 200  | Password updated                     |
+| 400  | Token invalid, expired or already used |
+| 422  | Password shorter than 8 characters   |
+
+---
+
+### POST /auth/change-password
+
+Change the signed-in user's password. Every other session is signed out; the response carries fresh tokens for this one (same shape as `/auth/login`).
+
+**Request Body:** `{"current_password": "...", "new_password": "..."}`
+
+| Code | Description                               |
+|------|-------------------------------------------|
+| 200  | Changed; new token pair returned          |
+| 400  | New password is the same as the current one |
+| 403  | Current password is incorrect             |
+
+---
+
 ## Users
 
 ### GET /users/me
@@ -187,12 +225,13 @@ Create or update the user's medical profile.
 ```json
 {
   "blood_type": "B+",
+  "dietary_preference": "vegetarian",
   "allergies": ["peanuts"],
   "chronic_conditions": ["type_2_diabetes"],
   "medications": ["metformin_500mg"],
   "surgeries": [],
   "family_history": ["hypertension"],
-  "dietary_restrictions": ["vegetarian"],
+  "dietary_restrictions": ["low_sodium"],
   "notes": "Active lifestyle, family history of diabetes"
 }
 ```
@@ -204,12 +243,13 @@ Create or update the user's medical profile.
   "id": "664b...",
   "user_id": "664a...",
   "blood_type": "B+",
+  "dietary_preference": "vegetarian",
   "allergies": ["peanuts"],
   "chronic_conditions": ["type_2_diabetes"],
   "medications": ["metformin_500mg"],
   "surgeries": [],
   "family_history": ["hypertension"],
-  "dietary_restrictions": ["vegetarian"],
+  "dietary_restrictions": ["low_sodium"],
   "notes": "Active lifestyle, family history of diabetes",
   "updated_at": "2026-06-15T14:30:00Z"
 }
@@ -217,9 +257,11 @@ Create or update the user's medical profile.
 
 ---
 
+`dietary_preference` is one of `non_vegetarian`, `eggetarian`, `vegetarian`, `vegan` (the food catalogue's filters); report-based plans use it.
+
 ### GET /users/me/medical-profile
 
-Retrieve the user's medical profile.
+Retrieve the user's medical profile. **404** if the user has not created one yet.
 
 **Response (200):** Same schema as POST response above.
 
@@ -229,6 +271,19 @@ Retrieve the user's medical profile.
 |------|---------------------|
 | 200  | Success             |
 | 404  | Profile not found   |
+
+---
+
+### DELETE /users/me
+
+Permanently delete the account and all of its data: reports (and their encrypted files), biomarkers, analyses, recommendations, suggestions, plans, progress, medical profile and notifications. Audit logs are kept until they expire (`AUDIT_LOG_RETENTION_DAYS`).
+
+**Request Body:** `{"password": "..."}`
+
+| Code | Description        |
+|------|--------------------|
+| 204  | Deleted            |
+| 403  | Incorrect password |
 
 ---
 
@@ -281,6 +336,12 @@ Get a specific report.
 |------|-----------------|
 | 200  | Success         |
 | 404  | Not found       |
+
+---
+
+### DELETE /reports/{report_id}
+
+Delete a report, its encrypted upload and everything derived from it (biomarkers, analysis, recommendations, suggestions and report-built plans). **Response:** 204.
 
 ---
 
@@ -388,6 +449,8 @@ Calculate nutrition using the stored user profile (no request body needed).
 
 Generate an AI-powered 7-day meal plan.
 
+> If the model does not answer within `LLM_TIMEOUT_SECONDS` (default 300) or its plan fails verification, a deterministic template plan that respects the same preferences is returned instead, and the outcome is recorded in `generation_metrics` (see `/health/ready`).
+
 **Request Body:**
 
 ```json
@@ -445,11 +508,19 @@ Generate an AI-powered 7-day meal plan.
 
 ---
 
+### GET /nutrition/diet-plans
+
+The user's saved diet plans, newest first, in the same shape `generate-diet` returns. Query: `limit` (1–100, default 20).
+
+---
+
 ## Fitness
 
 ### POST /fitness/generate-workout
 
 Generate an AI-powered workout plan.
+
+> If the model does not answer within `LLM_TIMEOUT_SECONDS` (default 300) or its plan fails verification, a deterministic template plan that respects the same preferences is returned instead, and the outcome is recorded in `generation_metrics` (see `/health/ready`).
 
 **Request Body:**
 
@@ -500,6 +571,12 @@ List all workout plans for the user.
 ### GET /fitness/workout-plans/{plan_id}
 
 Get a specific workout plan.
+
+---
+
+### GET /fitness/plans
+
+Saved workout plans, newest first, as stored (including warm-ups, instructions and alternatives, which `/fitness/workout-plans` trims). Plans whose generation failed are skipped. Query: `limit` (1–100, default 20).
 
 ---
 
@@ -624,6 +701,46 @@ Download a generated PDF report with full analysis, diet plan, workout plan, and
 Download the original uploaded report file (decrypted).
 
 **Response:** `application/pdf` file stream.
+
+---
+
+## Notifications
+
+Written by the report pipeline (e.g. "Report Analysis Complete"), each with the `report_id` it is about.
+
+### GET /notifications/
+
+**Response (200):** `{"items": [{"id", "type", "title", "message", "read", "report_id", "created_at"}], "unread_count": 2}`. Query: `limit` (1–100, default 30).
+
+### POST /notifications/{notification_id}/read
+
+Mark one notification read. **Response:** 204.
+
+### POST /notifications/read-all
+
+Mark all of the user's notifications read. **Response:** 204.
+
+---
+
+## Admin
+
+Admin role only (403 otherwise). Exposes account metadata and counts, never report contents.
+
+### GET /admin/stats
+
+Counts of users, reports (total, last 7 days, by status), plans and progress entries.
+
+### GET /admin/users
+
+Users, newest first, with their report counts. Query: `q` (name or email contains), `limit` (default 100).
+
+### PATCH /admin/users/{user_id}/role
+
+**Request Body:** `{"role": "user" | "admin"}`. Admins cannot change their own role (400).
+
+### DELETE /admin/users/{user_id}
+
+Delete a user and all their data, as `DELETE /users/me` does. Admins cannot delete themselves here (400). **Response:** 204.
 
 ---
 

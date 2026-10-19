@@ -3,18 +3,16 @@ Recommendation service -- orchestrates lab interpretation, nutrition, and fitnes
 into a unified recommendation, including non-prescription supplement suggestions.
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 
 from app.repositories.biomarker_repository import BiomarkerRepository
 from app.repositories.recommendation_repository import RecommendationRepository
 from app.repositories.user_repository import UserRepository
+from app.services.fitness_service import FitnessService
 from app.services.lab_interpretation_service import LabInterpretationService
 from app.services.nutrition_service import NutritionService
-from app.services.fitness_service import FitnessService
-
 
 # Non-prescription supplement suggestions based on deficiency/risk labels
 _SUPPLEMENT_MAP: dict[str, dict] = {
@@ -131,7 +129,7 @@ class RecommendationService:
     async def generate(
         self,
         user_id: str,
-        report_id: Optional[str] = None,
+        report_id: str | None = None,
     ) -> dict:
         # 1. Fetch user profile
         user = await self.user_repo.find_by_id(user_id)
@@ -181,9 +179,7 @@ class RecommendationService:
         )
 
         # 6. Fitness adaptations
-        fitness_adaptations = self.fitness_service.get_biomarker_adaptations(
-            markers, gender
-        )
+        fitness_adaptations = self.fitness_service.get_biomarker_adaptations(markers, gender)
 
         # 7. Build summary
         summary_parts = []
@@ -204,9 +200,7 @@ class RecommendationService:
             f"(BMI: {nutrition_calc['bmi']} - {nutrition_calc['bmi_category']})."
         )
         if fitness_adaptations:
-            summary_parts.append(
-                f"Workout adaptations: {'; '.join(fitness_adaptations)}"
-            )
+            summary_parts.append(f"Workout adaptations: {'; '.join(fitness_adaptations)}")
 
         summary = " ".join(summary_parts)
 
@@ -222,7 +216,7 @@ class RecommendationService:
             "interpretation": full_interpretation,
             "supplements": supplements,
             "summary": summary,
-            "created_at": datetime.now(timezone.utc),
+            "created_at": datetime.now(UTC),
         }
         saved = await self.recommendation_repo.create(rec_doc)
         return saved

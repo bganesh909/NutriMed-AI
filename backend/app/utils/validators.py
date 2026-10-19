@@ -1,7 +1,10 @@
 """Input validation utilities for NutriMed AI."""
 
 import re
-from typing import Optional
+
+from bson import ObjectId
+from bson.errors import InvalidId
+from fastapi import HTTPException, status
 
 
 def validate_email(email: str) -> bool:
@@ -10,7 +13,7 @@ def validate_email(email: str) -> bool:
     return bool(re.match(pattern, email))
 
 
-def validate_password(password: str) -> tuple[bool, Optional[str]]:
+def validate_password(password: str) -> tuple[bool, str | None]:
     """Validate password strength. Returns (is_valid, error_message)."""
     if len(password) < 8:
         return False, "Password must be at least 8 characters long"
@@ -60,3 +63,19 @@ def validate_biomarker_value(name: str, value: float) -> bool:
         low, high = plausible_ranges[name]
         return low <= value <= high
     return True
+
+
+def to_object_id(value: str, resource: str = "Resource") -> ObjectId:
+    """
+    Convert a path/query parameter to a BSON ObjectId.
+
+    Raises a 404 (rather than letting bson raise InvalidId, which surfaces to the
+    client as a 500) when the value is not a valid 24-character hex ObjectId.
+    """
+    try:
+        return ObjectId(value)
+    except (InvalidId, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"{resource} not found",
+        ) from exc

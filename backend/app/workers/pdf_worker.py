@@ -8,7 +8,7 @@ Saves the file to the uploads directory and creates a notification.
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from bson import ObjectId
 from pymongo import MongoClient
@@ -42,7 +42,7 @@ def generate_pdf_report(self, report_id: str, user_id: str):
     """
     db = _get_db()
     report_oid = ObjectId(report_id)
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
 
     logger.info("Starting PDF generation for report %s, user %s", report_id, user_id)
 
@@ -78,9 +78,7 @@ def generate_pdf_report(self, report_id: str, user_id: str):
         if biomarker_doc:
             excluded_keys = {"_id", "user_id", "report_id", "extracted_at"}
             biomarkers_data = {
-                k: v
-                for k, v in biomarker_doc.items()
-                if k not in excluded_keys and isinstance(v, (int, float))
+                k: v for k, v in biomarker_doc.items() if k not in excluded_keys and isinstance(v, (int, float))
             }
 
         # Interpretation from rule engine
@@ -92,19 +90,13 @@ def generate_pdf_report(self, report_id: str, user_id: str):
         diet_data = None
         if diet_plan_doc:
             plan = diet_plan_doc.get("plan", {})
-            if isinstance(plan, dict):
-                diet_data = plan
-            else:
-                diet_data = {"meal_plan": plan}
+            diet_data = plan if isinstance(plan, dict) else {"meal_plan": plan}
 
         # Workout plan
         workout_data = None
         if workout_plan_doc:
             plan = workout_plan_doc.get("plan", {})
-            if isinstance(plan, dict):
-                workout_data = plan
-            else:
-                workout_data = {"plan": plan}
+            workout_data = plan if isinstance(plan, dict) else {"plan": plan}
 
         # Supplements
         supplements_data = None
@@ -150,6 +142,7 @@ def generate_pdf_report(self, report_id: str, user_id: str):
         # ---- Create notification ----
         notification = {
             "user_id": user_id,
+            "report_id": report_id,
             "type": "pdf_ready",
             "title": "PDF Report Ready",
             "message": "Your comprehensive health report PDF has been generated and is ready for download.",
@@ -168,8 +161,8 @@ def generate_pdf_report(self, report_id: str, user_id: str):
                 "$set": {
                     "status": "failed",
                     "error": f"PDF generation failed: {exc}",
-                    "updated_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(UTC),
                 }
             },
         )
-        raise self.retry(exc=exc, countdown=60)
+        raise self.retry(exc=exc, countdown=60) from exc

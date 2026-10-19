@@ -19,14 +19,7 @@ import { useLogProgress, useProgressHistory } from "@/hooks/use-progress";
 import { Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import type { ProgressLog } from "@/types";
 
-const mockHistory: ProgressLog[] = [
-  { id: "1", user_id: "1", date: "2026-06-01", weight: 82, body_fat: 22, waist: 86, chest: 100, arms: 34, notes: "Starting point", created_at: "2026-06-01" },
-  { id: "2", user_id: "1", date: "2026-06-08", weight: 81.2, body_fat: 21.5, waist: 85, chest: 100, arms: 34, notes: "", created_at: "2026-06-08" },
-  { id: "3", user_id: "1", date: "2026-06-15", weight: 80.5, body_fat: 21, waist: 84.5, chest: 100.5, arms: 34.2, notes: "Feeling stronger", created_at: "2026-06-15" },
-  { id: "4", user_id: "1", date: "2026-06-22", weight: 79.8, body_fat: 20.5, waist: 84, chest: 101, arms: 34.5, notes: "Good progress", created_at: "2026-06-22" },
-];
 
 export default function ProgressPage() {
   const [weight, setWeight] = useState("");
@@ -39,7 +32,7 @@ export default function ProgressPage() {
   const logMutation = useLogProgress();
   const { data: history } = useProgressHistory();
 
-  const progressData = history || mockHistory;
+  const progressData = history ?? [];
 
   const handleSubmit = async () => {
     if (!weight && !bodyFat) {

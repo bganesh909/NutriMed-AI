@@ -1,0 +1,27 @@
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "S",     # flake8-bandit (security)
+    "UP",    # pyupgrade
+    "SIM",   # flake8-simplify
+]
+ignore = [
+    "S101",  # assert used (needed in tests)
+    "S105",  # hardcoded password (false positives in config defaults)
+    "S106",  # hardcoded password
+    "B008",  # function call in default argument (FastAPI Depends)
+]
+
+[lint.per-file-ignores]
+"tests/**" = ["S101", "S106"]
+
+[format]
+quote-style = "double"
+indent-style = "space"

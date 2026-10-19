@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -10,11 +9,11 @@ class RecommendationResponse(BaseModel):
     id: str
     user_id: str
     biomarker_id: str
-    deficiencies: List[str] = []
-    risk_factors: List[str] = []
-    dietary_suggestions: List[str] = []
-    supplement_suggestions: List[str] = []
-    warnings: List[str] = []
-    generated_at: Optional[datetime] = None
+    deficiencies: list[str] = []
+    risk_factors: list[str] = []
+    dietary_suggestions: list[str] = []
+    supplement_suggestions: list[str] = []
+    warnings: list[str] = []
+    generated_at: datetime | None = None
 
     model_config = {"from_attributes": True}

@@ -1,5 +1,4 @@
-from typing import Optional
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.repositories.base import BaseRepository
 
@@ -9,12 +8,12 @@ class MedicalProfileRepository(BaseRepository):
 
     async def create_or_update(self, user_id: str, data: dict) -> dict:
         data["user_id"] = user_id
-        data["updated_at"] = datetime.now(timezone.utc)
+        data["updated_at"] = datetime.now(UTC)
         existing = await self.find_one({"user_id": user_id})
         if existing:
             result = await self.update_one(existing["id"], data)
             return result
         return await self.insert_one(data)
 
-    async def get_by_user(self, user_id: str) -> Optional[dict]:
+    async def get_by_user(self, user_id: str) -> dict | None:
         return await self.find_one({"user_id": user_id})

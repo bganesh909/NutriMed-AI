@@ -1,11 +1,10 @@
-from datetime import datetime, timezone
-from enum import Enum
-from typing import Optional
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from pydantic import BaseModel, Field
 
 
-class ReportType(str, Enum):
+class ReportType(StrEnum):
     CBC = "CBC"
     LIPID = "LIPID"
     LFT = "LFT"
@@ -13,9 +12,10 @@ class ReportType(str, Enum):
     THYROID = "THYROID"
     VITAMIN = "VITAMIN"
     DIABETES = "DIABETES"
+    GENERAL = "GENERAL"
 
 
-class ReportStatus(str, Enum):
+class ReportStatus(StrEnum):
     UPLOADED = "uploaded"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -23,15 +23,15 @@ class ReportStatus(str, Enum):
 
 
 class ReportModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
     report_type: ReportType
     file_path: str
     original_filename: str
     status: ReportStatus = ReportStatus.UPLOADED
-    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    processed_at: Optional[datetime] = None
-    encryption_key: Optional[str] = None
+    uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    processed_at: datetime | None = None
+    encryption_key: str | None = None
 
     model_config = {
         "populate_by_name": True,

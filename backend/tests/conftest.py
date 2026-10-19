@@ -8,10 +8,9 @@ Provides:
 - Pre-created test user and auth-token helpers
 """
 
-import asyncio
 import os
 from datetime import datetime, timezone
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
@@ -31,24 +30,18 @@ from app.core.security import create_access_token, hash_password  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Event loop
-# ---------------------------------------------------------------------------
-
-@pytest.fixture(scope="session")
-def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
-    """Create a single event loop for the entire test session."""
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
-
-
-# ---------------------------------------------------------------------------
 # MongoDB fixtures
 # ---------------------------------------------------------------------------
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture()
 async def mongo_client() -> AsyncGenerator[AsyncIOMotorClient, None]:
-    """Session-scoped MongoDB client."""
+    """
+    MongoDB client, function-scoped on purpose.
+
+    Motor binds its connection pool to the running event loop. A session-scoped
+    client shared across function-scoped tests raises "attached to a different
+    loop"; creating one per test is cheap and keeps every await on one loop.
+    """
     client = AsyncIOMotorClient(settings.MONGO_URI)
     yield client
     client.close()

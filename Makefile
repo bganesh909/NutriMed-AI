@@ -1,4 +1,4 @@
-.PHONY: help up down build logs test seed clean models dev-local stop-local
+.PHONY: help up down build logs test test-backend test-ocr test-frontend seed clean models dev-local stop-local
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -21,14 +21,25 @@ logs-api: ## Tail API gateway logs
 logs-worker: ## Tail Celery worker logs
 	docker compose logs -f celery-worker
 
-test: ## Run backend tests
+test: ## Run all test suites (backend + OCR service + frontend)
+	$(MAKE) test-backend
+	$(MAKE) test-ocr
+	$(MAKE) test-frontend
+
+test-backend: ## Run backend tests (needs MongoDB + Redis running)
 	cd backend && python -m pytest tests/ -v
 
-test-unit: ## Run unit tests only
+test-unit: ## Run backend unit tests only
 	cd backend && python -m pytest tests/unit/ -v
 
-test-integration: ## Run integration tests only
+test-integration: ## Run backend integration tests only (needs MongoDB)
 	cd backend && python -m pytest tests/integration/ -v
+
+test-ocr: ## Run OCR service tests
+	cd services/ocr-service && python -m pytest tests/ -v
+
+test-frontend: ## Run frontend unit tests
+	cd frontend && npm test
 
 seed: ## Seed the database
 	cd seeds && python seed_data.py

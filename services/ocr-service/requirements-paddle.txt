@@ -1,0 +1,5 @@
+# Optional OCR backend. Preferred over Tesseract when installed.
+# No wheel is published for macOS on Apple Silicon (arm64) -- install this on
+# Linux/x86_64 (including the Docker image) only.
+paddleocr>=2.7.0
+paddlepaddle>=2.6.0

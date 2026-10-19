@@ -2,8 +2,7 @@
 Progress tracking service -- log body metrics over time and compute trends.
 """
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from app.repositories.progress_repository import ProgressRepository
 
@@ -21,24 +20,22 @@ class ProgressService:
             "hip_cm": data.get("hip_cm"),
             "neck_cm": data.get("neck_cm"),
             "notes": data.get("notes", ""),
-            "recorded_at": datetime.now(timezone.utc),
+            "recorded_at": datetime.now(UTC),
         }
         return await self.progress_repo.create(doc)
 
     async def get_history(
         self,
         user_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
+        start_date: datetime | None = None,
+        end_date: datetime | None = None,
     ) -> dict:
-        entries = await self.progress_repo.get_history(
-            user_id, start_date=start_date, end_date=end_date
-        )
+        entries = await self.progress_repo.get_history(user_id, start_date=start_date, end_date=end_date)
         total = len(entries)
         trends = self._compute_trends(entries)
         return {"entries": entries, "total": total, "trends": trends}
 
-    async def get_latest(self, user_id: str) -> Optional[dict]:
+    async def get_latest(self, user_id: str) -> dict | None:
         return await self.progress_repo.get_latest(user_id)
 
     @staticmethod

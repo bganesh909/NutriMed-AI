@@ -5,9 +5,6 @@ Each biomarker has defined reference ranges (gender-specific where applicable).
 The engine produces deficiencies, risk_factors, and warnings.
 """
 
-from typing import Optional
-
-
 REFERENCE_RANGES: dict[str, dict] = {
     "hemoglobin": {
         "male": (13.0, 17.0),
@@ -150,6 +147,30 @@ REFERENCE_RANGES: dict[str, dict] = {
 
 # ---- Specific clinical rules that go beyond simple range checks ----
 
+
+#: Canonical names produced by the OCR service differ from the keys used above
+#: for some markers. Normalise them so the rules actually fire -- without this,
+#: e.g. fasting glucose arrives as "fasting_glucose", finds no range, and a
+#: pre-diabetic result is silently recorded as "unknown".
+MARKER_ALIASES: dict[str, str] = {
+    "fasting_glucose": "fasting_sugar",
+    "glucose_fasting": "fasting_sugar",
+    "blood_sugar_fasting": "fasting_sugar",
+    "glucose": "fasting_sugar",
+    "hba1c_percent": "hba1c",
+    "cholesterol_total": "total_cholesterol",
+    "hdl_cholesterol": "hdl",
+    "ldl_cholesterol": "ldl",
+    "vitamin_b_12": "vitamin_b12",
+    "25_oh_vitamin_d": "vitamin_d",
+}
+
+
+def canonicalise_marker(name: str) -> str:
+    """Map an incoming marker name onto the key used by REFERENCE_RANGES."""
+    return MARKER_ALIASES.get(name, name)
+
+
 _CLINICAL_RULES: list[dict] = [
     {
         "marker": "hemoglobin",
@@ -170,7 +191,10 @@ _CLINICAL_RULES: list[dict] = [
         "condition": lambda val, _: val < 20,
         "category": "deficiency",
         "label": "Vitamin D deficiency",
-        "detail": "Severe vitamin D deficiency (<20 ng/mL). Sun exposure, supplementation, and vitamin D-rich foods recommended.",
+        "detail": (
+            "Severe vitamin D deficiency (<20 ng/mL). Sun exposure, supplementation, and vitamin D-rich foods "
+            "recommended."
+        ),
     },
     {
         "marker": "vitamin_d",
@@ -191,7 +215,9 @@ _CLINICAL_RULES: list[dict] = [
         "condition": lambda val, _: val > 130,
         "category": "risk_factor",
         "label": "High LDL cholesterol",
-        "detail": "LDL >130 mg/dL increases cardiovascular risk. Dietary changes, exercise, and medical review advised.",
+        "detail": (
+            "LDL >130 mg/dL increases cardiovascular risk. Dietary changes, exercise, and medical review advised."
+        ),
     },
     {
         "marker": "ldl",
@@ -317,14 +343,18 @@ _CLINICAL_RULES: list[dict] = [
         "condition": lambda val, _: val < 2.7,
         "category": "deficiency",
         "label": "Folate deficiency",
-        "detail": "Low folate can cause megaloblastic anemia. Increase leafy greens, legumes, or supplement with folic acid.",
+        "detail": (
+            "Low folate can cause megaloblastic anemia. Increase leafy greens, legumes, or supplement with folic acid."
+        ),
     },
     {
         "marker": "magnesium",
         "condition": lambda val, _: val < 1.7,
         "category": "deficiency",
         "label": "Low magnesium",
-        "detail": "Low magnesium may cause muscle cramps, fatigue. Consider nuts, seeds, whole grains, or supplementation.",
+        "detail": (
+            "Low magnesium may cause muscle cramps, fatigue. Consider nuts, seeds, whole grains, or supplementation."
+        ),
     },
     {
         "marker": "potassium",
@@ -352,7 +382,7 @@ class LabInterpretationService:
     def interpret(
         self,
         markers: dict[str, float],
-        gender: Optional[str] = None,
+        gender: str | None = None,
     ) -> dict:
         """
         Interpret biomarker values and return structured findings.
@@ -369,6 +399,10 @@ class LabInterpretationService:
         gender = (gender or "male").lower()
         if gender not in ("male", "female"):
             gender = "male"
+
+        # Normalise incoming marker names once so both the per-marker details
+        # below and the clinical rules further down look up the same keys.
+        markers = {canonicalise_marker(k): v for k, v in markers.items()}
 
         deficiencies: list[dict] = []
         risk_factors: list[dict] = []

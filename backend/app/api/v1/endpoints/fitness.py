@@ -1,15 +1,13 @@
-from typing import Optional
-
-from bson import ObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel, Field
 
 from app.core.dependencies import get_current_user, get_db
 from app.repositories.biomarker_repository import BiomarkerRepository
 from app.repositories.workout_plan_repository import WorkoutPlanRepository
-from app.services.fitness_service import FitnessService
 from app.schemas.workout_plan import WorkoutPlanResponse
+from app.services.fitness_service import FitnessService
+from app.utils.validators import to_object_id
 
 router = APIRouter(prefix="/fitness")
 
@@ -33,7 +31,7 @@ async def generate_workout_plan(
     service = FitnessService(workout_repo)
 
     # Optionally fetch latest biomarkers for adaptation
-    biomarkers: Optional[dict] = None
+    biomarkers: dict | None = None
     if body.use_biomarkers:
         bio_repo = BiomarkerRepository(db)
         bio_doc = await bio_repo.get_latest_by_user(current_user["id"])
@@ -41,7 +39,8 @@ async def generate_workout_plan(
             # Extract marker values from biomarker doc
             exclude_keys = {"id", "user_id", "report_id", "created_at", "extracted_at"}
             biomarkers = {
-                k: v for k, v in bio_doc.items()
+                k: v
+                for k, v in bio_doc.items()
                 if k not in exclude_keys and v is not None and isinstance(v, (int, float))
             }
             # Also check for "markers" dict format
@@ -85,7 +84,9 @@ async def get_workout_plan(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    doc = await db["workout_plans"].find_one({"_id": ObjectId(plan_id), "user_id": current_user["id"]})
+    doc = await db["workout_plans"].find_one(
+        {"_id": to_object_id(plan_id, "Workout plan"), "user_id": current_user["id"]}
+    )
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workout plan not found")
     doc["id"] = str(doc.pop("_id"))
@@ -93,3 +94,27 @@ async def get_workout_plan(
         plan = doc.get("plan")
         doc["days"] = plan if isinstance(plan, list) else []
     return WorkoutPlanResponse(**doc)
+
+
+@router.get("/plans")
+async def list_saved_workout_plans(
+    limit: int = Query(20, ge=1, le=100),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """
+    The user's saved workout plans, newest first, as stored (warm-ups,
+    instructions and alternatives included -- /workout-plans trims these).
+    Plans whose generation failed and hold no exercises are skipped.
+    """
+    cursor = db["workout_plans"].find({"user_id": current_user["id"]}).sort("created_at", -1)
+    plans = []
+    async for doc in cursor:
+        days = doc.get("days") or doc.get("plan") or []
+        if not (isinstance(days, list) and any(isinstance(d, dict) and d.get("exercises") for d in days)):
+            continue
+        doc["id"] = str(doc.pop("_id"))
+        plans.append(doc)
+        if len(plans) >= limit:
+            break
+    return plans

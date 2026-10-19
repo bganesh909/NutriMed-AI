@@ -79,22 +79,137 @@ class TestNutritionCalculate:
 
 @pytest.mark.asyncio
 class TestDietPlanGeneration:
-    async def test_generate_diet_plan(self, client: AsyncClient, auth_headers, test_user):
-        """
-        Calls the diet plan generation endpoint.
-        This will fail with 503 if Ollama is not running, which is expected.
-        """
+    """
+    The LLM is stubbed here on purpose: these assert the grounding contract,
+    not the model. Calling a real 7B model would make the suite slow,
+    non-deterministic and dependent on Ollama being up.
+    """
+
+    @staticmethod
+    def _stub_llm(response):
+        async def _call(self, prompt: str):
+            return response
+        return _call
+
+    async def test_macros_are_recomputed_from_the_food_database(
+        self, client: AsyncClient, auth_headers, monkeypatch
+    ):
+        from app.data.food_database import FOOD_DATABASE
+        from app.services.nutrition_service import NutritionService
+
+        oats = next(f for f in FOOD_DATABASE if f["name"] == "Oats (dry)")
+        chicken = next(f for f in FOOD_DATABASE if f["name"] == "Chicken Breast (cooked)")
+
+        # A nutritionally sound day, so the adequacy gate keeps it -- but the
+        # model reports a wildly wrong calorie figure that must be discarded.
+        monkeypatch.setattr(
+            NutritionService, "_call_llm",
+            self._stub_llm([
+                {"day": "Monday", "meals": [
+                    {"name": "Breakfast", "time": "8:00 AM", "foods": [
+                        {"name": "Oats (dry)", "quantity_g": 100, "calories": 5},
+                        {"name": "Banana", "quantity_g": 150},
+                    ]},
+                    {"name": "Mid-Morning Snack", "time": "11:00 AM", "foods": [
+                        {"name": "Almonds", "quantity_g": 40},
+                    ]},
+                    {"name": "Lunch", "time": "1:00 PM", "foods": [
+                        {"name": "Chicken Breast (cooked)", "quantity_g": 200},
+                        {"name": "Brown Rice (cooked)", "quantity_g": 300},
+                        {"name": "Broccoli (cooked)", "quantity_g": 150},
+                    ]},
+                    {"name": "Evening Snack", "time": "5:00 PM", "foods": [
+                        {"name": "Paneer", "quantity_g": 100},
+                    ]},
+                    {"name": "Dinner", "time": "8:00 PM", "foods": [
+                        {"name": "Chicken Breast (cooked)", "quantity_g": 200},
+                        {"name": "Brown Rice (cooked)", "quantity_g": 200},
+                        {"name": "Olive Oil", "quantity_g": 15},
+                    ]},
+                ]},
+            ]),
+        )
+
         resp = await client.post(
             "/api/v1/nutrition/generate-diet",
             headers=auth_headers,
-            json={
-                "goal": "maintenance",
-                "dietary_restrictions": ["vegetarian"],
-                "allergies": ["peanuts"],
-            },
+            json={"goal": "maintenance"},
         )
-        # 201 if Ollama is available, 503 if not
-        assert resp.status_code in (201, 503)
+        assert resp.status_code == 201
+        body = resp.json()
+
+        meals = body["meal_plan"][0]["meals"]
+        breakfast = next(m for m in meals if m["name"] == "Breakfast")
+        item = breakfast["foods"][0]
+        assert item["calories"] == pytest.approx(oats["calories"], abs=0.2)
+        assert item["calories"] != 5
+
+        lunch = next(m for m in meals if m["name"] == "Lunch")
+        chicken_item = next(f for f in lunch["foods"] if f["name"] == chicken["name"])
+        assert chicken_item["protein_g"] == pytest.approx(chicken["protein_g"] * 2, abs=0.2)
+
+    async def test_hallucinated_food_is_dropped(
+        self, client: AsyncClient, auth_headers, monkeypatch
+    ):
+        from app.services.nutrition_service import NutritionService
+
+        monkeypatch.setattr(
+            NutritionService, "_call_llm",
+            self._stub_llm([
+                {"day": "Monday", "meals": [
+                    {"name": "Breakfast", "foods": [
+                        {"name": "Oats (dry)", "quantity_g": 100},
+                        {"name": "Unicorn Steak", "quantity_g": 200},
+                        {"name": "Banana", "quantity_g": 150},
+                    ]},
+                    {"name": "Lunch", "foods": [
+                        {"name": "Chicken Breast (cooked)", "quantity_g": 250},
+                        {"name": "Brown Rice (cooked)", "quantity_g": 300},
+                        {"name": "Broccoli (cooked)", "quantity_g": 150},
+                    ]},
+                    {"name": "Dinner", "foods": [
+                        {"name": "Paneer", "quantity_g": 120},
+                        {"name": "Brown Rice (cooked)", "quantity_g": 250},
+                        {"name": "Olive Oil", "quantity_g": 15},
+                        {"name": "Almonds", "quantity_g": 40},
+                    ]},
+                ]},
+            ]),
+        )
+
+        resp = await client.post(
+            "/api/v1/nutrition/generate-diet",
+            headers=auth_headers,
+            json={"goal": "maintenance"},
+        )
+        assert resp.status_code == 201
+        names = [
+            f["name"]
+            for day in resp.json()["meal_plan"]
+            for meal in day["meals"]
+            for f in meal["foods"]
+        ]
+        assert "Unicorn Steak" not in names
+
+    async def test_unusable_response_falls_back_to_template_plan(
+        self, client: AsyncClient, auth_headers, monkeypatch
+    ):
+        """A failed model must still leave the user with a real plan."""
+        from app.services.nutrition_service import NutritionService
+
+        monkeypatch.setattr(
+            NutritionService, "_call_llm", self._stub_llm("not json at all")
+        )
+
+        resp = await client.post(
+            "/api/v1/nutrition/generate-diet",
+            headers=auth_headers,
+            json={"goal": "maintenance"},
+        )
+        assert resp.status_code == 201
+        body = resp.json()
+        assert body["meal_plan"], "fallback must produce a plan"
+        assert body["meal_plan"][0]["meals"]
 
     async def test_generate_diet_without_auth(self, client: AsyncClient):
         resp = await client.post(

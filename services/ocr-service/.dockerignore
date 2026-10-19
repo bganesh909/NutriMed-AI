@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Virtual environments — these are host-specific and 250MB+; the image
+# installs its own dependencies from requirements.txt.
+venv/
+.venv/
+env/
+
+# Testing
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+pytest.ini
+requirements-dev.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+
+# Logs
+*.log
+logs/

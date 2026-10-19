@@ -1,17 +1,16 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field
 
 
 class NotificationModel(BaseModel):
-    id: Optional[str] = Field(default=None, alias="_id")
+    id: str | None = Field(default=None, alias="_id")
     user_id: str
     type: str
     title: str
     message: str
     read: bool = False
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     model_config = {
         "populate_by_name": True,

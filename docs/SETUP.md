@@ -74,7 +74,7 @@ brew install ollama
 ollama serve
 
 # Pull models (in a new terminal)
-ollama pull llama3
+ollama pull mistral:7b
 ollama pull mistral
 ```
 
@@ -88,7 +88,7 @@ curl -fsSL https://ollama.com/install.sh | sh
 systemctl start ollama
 
 # Pull models
-ollama pull llama3
+ollama pull mistral:7b
 ollama pull mistral
 ```
 
@@ -99,7 +99,7 @@ ollama pull mistral
 curl http://localhost:11434/api/tags
 
 # Test a model
-ollama run llama3 "Say hello"
+ollama run mistral:7b "Say hello"
 ```
 
 ## MongoDB Setup (Local Development)

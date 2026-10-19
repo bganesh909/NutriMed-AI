@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -11,16 +10,16 @@ __all__ = ["DietPlanRequest", "DietPlanResponse", "MealSchema", "FoodItemSchema"
 class FoodItemSchema(BaseModel):
     name: str
     quantity: str = ""
-    calories: Optional[float] = None
-    protein_g: Optional[float] = None
-    carbs_g: Optional[float] = None
-    fat_g: Optional[float] = None
+    calories: float | None = None
+    protein_g: float | None = None
+    carbs_g: float | None = None
+    fat_g: float | None = None
 
 
 class MealSchema(BaseModel):
     name: str
     time: str
-    foods: List[FoodItemSchema] = Field(default_factory=list)
+    foods: list[FoodItemSchema] = Field(default_factory=list)
 
 
 class DietPlanRequest(BaseModel):
@@ -39,9 +38,9 @@ class DietPlanResponse(BaseModel):
     protein_g: float
     carbs_g: float
     fat_g: float
-    meals: List[MealSchema] = []
+    meals: list[MealSchema] = []
     duration_weeks: int = 4
     notes: str = ""
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     model_config = {"from_attributes": True}
