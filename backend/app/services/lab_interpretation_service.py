@@ -5,6 +5,10 @@ Each biomarker has defined reference ranges (gender-specific where applicable).
 The engine produces deficiencies, risk_factors, and warnings.
 """
 
+import math
+
+from app.services.lab_units import CANONICAL_UNITS, parse_range, range_matches_scale, to_canonical
+
 REFERENCE_RANGES: dict[str, dict] = {
     "hemoglobin": {
         "male": (13.0, 17.0),
@@ -373,6 +377,61 @@ _CLINICAL_RULES: list[dict] = [
 ]
 
 
+def _scaled_marker_detail(
+    marker: str, stored: float | None, reported: dict | None, gender: str
+) -> tuple[dict, float | None]:
+    """
+    Detail row and canonical value for a scale-sensitive marker (blood counts,
+    hemoglobin). Uses the value as printed on the report when known; otherwise
+    the stored value, whose conversion is a no-op if it is already canonical.
+    """
+    printed = None
+    if reported and isinstance(reported.get("value"), (int, float)):
+        shown = float(reported["value"])
+        printed = parse_range(reported.get("reference_range"))
+        conversion = to_canonical(marker, shown, reported.get("unit") or "", printed)
+    else:
+        shown = stored
+        conversion = to_canonical(marker, stored)
+
+    if conversion.value is None:
+        return (
+            {
+                "value": shown,
+                "unit": conversion.reported_unit,
+                "status": "unknown",
+                "range": None,
+                "note": "unit unclear; compare with the range printed on your report",
+            },
+            None,
+        )
+
+    # WBC, platelets and RBC have no clinical rules, so the issuing lab's own
+    # range can decide. Hemoglobin keeps the standard range the anemia rule
+    # uses, so the two cannot contradict each other.
+    if marker != "hemoglobin" and printed and range_matches_scale(marker, printed, conversion.factor):
+        lab_low, lab_high = printed
+        status = "low" if shown < lab_low else "high" if shown > lab_high else "normal"
+        detail = {
+            "value": shown,
+            "unit": conversion.reported_unit,
+            "status": status,
+            "range": f"{lab_low:g}-{lab_high:g}",
+            "source": "lab",
+        }
+        return detail, conversion.value
+
+    ref = REFERENCE_RANGES[marker]
+    low, high = ref[gender] if gender in ref else ref["general"]
+    canonical = conversion.value
+    status = "low" if canonical < low else "high" if canonical > high else "normal"
+    # Shown on the scale it was reported in, with the range converted to match.
+    factor = conversion.factor
+    rng = f"{low}-{high}" if math.isclose(factor, 1.0) else f"{low / factor:g}-{high / factor:g}"
+    detail = {"value": shown, "unit": conversion.reported_unit, "status": status, "range": rng, "source": "standard"}
+    return detail, canonical
+
+
 class LabInterpretationService:
     """
     Stateless deterministic rule engine for interpreting biomarker values.
@@ -383,9 +442,14 @@ class LabInterpretationService:
         self,
         markers: dict[str, float],
         gender: str | None = None,
+        reported: dict[str, dict] | None = None,
     ) -> dict:
         """
         Interpret biomarker values and return structured findings.
+
+        `reported` holds values exactly as printed on the report --
+        {marker: {value, unit, reference_range}} -- when known. Blood counts use
+        it to convert to canonical units and to judge against the lab's range.
 
         Returns:
             {
@@ -403,6 +467,7 @@ class LabInterpretationService:
         # Normalise incoming marker names once so both the per-marker details
         # below and the clinical rules further down look up the same keys.
         markers = {canonicalise_marker(k): v for k, v in markers.items()}
+        reported = {canonicalise_marker(k): v for k, v in (reported or {}).items() if isinstance(v, dict)}
 
         deficiencies: list[dict] = []
         risk_factors: list[dict] = []
@@ -410,7 +475,22 @@ class LabInterpretationService:
         normal: list[str] = []
         marker_details: dict[str, dict] = {}
 
+        # Scale-sensitive markers first: convert them to canonical units so the
+        # range checks and clinical rules below compare like with like. A
+        # count whose scale is unclear is shown as such and left out of the rules.
+        for marker in [m for m in CANONICAL_UNITS if m in markers or m in reported]:
+            detail, canonical = _scaled_marker_detail(marker, markers.get(marker), reported.get(marker), gender)
+            marker_details[marker] = detail
+            if canonical is None:
+                markers.pop(marker, None)
+            else:
+                markers[marker] = canonical
+            if detail["status"] == "normal":
+                normal.append(marker)
+
         for marker, value in markers.items():
+            if marker in marker_details:
+                continue
             ref = REFERENCE_RANGES.get(marker)
             if ref is None:
                 # Unknown marker -- skip rule checks, still record it

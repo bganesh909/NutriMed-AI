@@ -233,7 +233,7 @@ def analyze_biomarkers(self, report_id: str, user_id: str):
 
         # --- Deterministic rule engine ---
         rule_engine = LabInterpretationService()
-        rule_result = rule_engine.interpret(markers, gender)
+        rule_result = rule_engine.interpret(markers, gender, reported=biomarker_doc.get("as_reported"))
 
         logger.info(
             "Rule engine: %d deficiencies, %d risks, %d warnings for report %s",

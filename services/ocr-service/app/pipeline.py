@@ -137,8 +137,10 @@ def detect_report_type(text: str) -> ReportType:
 _PLAUSIBLE_RANGES: dict[str, tuple[float, float]] = {
     "hemoglobin": (2.0, 25.0),
     "rbc": (0.5, 10.0),
-    "wbc": (500, 100000),
-    "platelets": (0.1, 20.0),  # in lakhs
+    # Counts may be printed in units, thousands or lakhs; the API works out
+    # which, so accept the union of the plausible values on each scale.
+    "wbc": (0.1, 500000),
+    "platelets": (0.1, 3000000),
     "pcv": (10, 70),
     "mcv": (50, 150),
     "mch": (15, 45),

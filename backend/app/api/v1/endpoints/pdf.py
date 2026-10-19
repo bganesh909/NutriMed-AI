@@ -62,7 +62,7 @@ async def download_generated_pdf(
         if markers:
             lab_service = LabInterpretationService()
             gender = (user_doc.get("gender") or "male").lower()
-            interpretation = lab_service.interpret(markers, gender)
+            interpretation = lab_service.interpret(markers, gender, reported=biomarkers.get("as_reported"))
 
     # Fetch latest diet plan
     diet_plan = await db["diet_plans"].find_one(

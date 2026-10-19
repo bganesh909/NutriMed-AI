@@ -61,6 +61,10 @@ export interface MarkerDetail {
   unit: string;
   status: "low" | "high" | "normal" | "unknown";
   range: string | null;
+  /** "lab": the range printed on the user's report; "standard": the app's. */
+  source?: "lab" | "standard";
+  /** Why a value could not be classified (e.g. its unit is unclear). */
+  note?: string;
 }
 
 export interface SupplementSuggestion {
@@ -92,6 +96,8 @@ export interface Biomarker {
   reference_max: number;
   status: "Normal" | "Low" | "High" | "Critical";
   category: string;
+  /** Where the reference range came from (see MarkerDetail.source). */
+  rangeSource?: "lab" | "standard";
 }
 
 export interface Recommendation {

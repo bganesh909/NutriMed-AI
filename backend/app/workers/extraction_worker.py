@@ -15,6 +15,7 @@ from pymongo import MongoClient
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
+from app.services.lab_units import parse_range, to_canonical
 
 logger = logging.getLogger(__name__)
 
@@ -74,13 +75,19 @@ def _extract_markers_from_text(raw_text: str) -> dict[str, float]:
     return markers
 
 
-def _markers_from_ocr_result(ocr_result: dict) -> dict[str, float]:
+def _markers_from_ocr_result(ocr_result: dict) -> tuple[dict[str, float], dict[str, dict]]:
     """
     Reuse the structured biomarkers already parsed by the OCR service, if present.
-    The OCR service returns {"ocr": {...}, "biomarkers": {"biomarkers": [ {name, value, ...} ]}}.
-    Returns a dict of marker_name -> numeric value.
+    The OCR service returns {"ocr": {...}, "biomarkers": {"biomarkers": [ {name, value, unit, ...} ]}}.
+
+    Returns (markers, as_reported): marker_name -> value, with blood counts in
+    canonical units (app/services/lab_units.py) so every reader -- rule engine,
+    workout adaptations, the PDF -- compares like with like; and the value,
+    unit and reference range exactly as printed. A count whose scale is unclear
+    is kept in as_reported only, so nothing misreads it.
     """
     markers: dict[str, float] = {}
+    as_reported: dict[str, dict] = {}
     bio = ocr_result.get("biomarkers")
     items = bio.get("biomarkers") if isinstance(bio, dict) else None
     if isinstance(items, list):
@@ -89,9 +96,16 @@ def _markers_from_ocr_result(ocr_result: dict) -> dict[str, float]:
                 continue
             name = item.get("name")
             value = item.get("value")
-            if name and isinstance(value, (int, float)):
-                markers[str(name)] = float(value)
-    return markers
+            if not name or not isinstance(value, (int, float)):
+                continue
+            name = str(name)
+            unit = str(item.get("unit") or "")
+            reference_range = str(item.get("reference_range") or "")
+            as_reported[name] = {"value": float(value), "unit": unit, "reference_range": reference_range}
+            canonical = to_canonical(name, float(value), unit, parse_range(reference_range)).value
+            if canonical is not None:
+                markers[name] = canonical
+    return markers, as_reported
 
 
 def _flatten_ocr_text(ocr_result: dict) -> str:
@@ -142,10 +156,13 @@ def extract_biomarkers(self, report_id: str):
         user_id = report["user_id"]
         # Prefer biomarkers already parsed by the OCR service; fall back to
         # regex parsing of the raw OCR text.
-        markers = _markers_from_ocr_result(ocr_result)
-        if not markers:
+        markers, as_reported = _markers_from_ocr_result(ocr_result)
+        if not markers and not as_reported:
             raw_text = _flatten_ocr_text(ocr_result)
-            markers = _extract_markers_from_text(raw_text)
+            parsed = _extract_markers_from_text(raw_text)
+            # No units here; values are placed by magnitude, or dropped if unclear.
+            converted = {name: to_canonical(name, value).value for name, value in parsed.items()}
+            markers = {name: value for name, value in converted.items() if value is not None}
 
         if not markers:
             logger.warning("No biomarkers extracted from report %s", report_id)
@@ -157,6 +174,8 @@ def extract_biomarkers(self, report_id: str):
             "extracted_at": datetime.now(UTC),
         }
         biomarker_doc.update(markers)
+        if as_reported:
+            biomarker_doc["as_reported"] = as_reported
 
         # Upsert into the biomarkers collection. report_id carries a unique
         # index, so re-running analysis on the same report must replace the

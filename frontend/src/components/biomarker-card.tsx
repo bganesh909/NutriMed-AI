@@ -78,6 +78,9 @@ export function BiomarkerCard({ biomarker }: BiomarkerCardProps) {
             <span>{reference_min} {unit}</span>
             <span>{reference_max} {unit}</span>
           </div>
+          {biomarker.rangeSource === "lab" && (
+            <p className="text-[11px] text-slate-500">Range from your lab report</p>
+          )}
         </div>
       </CardContent>
     </Card>

@@ -9,6 +9,7 @@ from app.core.security import encrypt_data
 from app.models.report import ReportModel, ReportStatus, ReportType
 from app.schemas.report import ReportAnalysisResponse, ReportResponse
 from app.services import account_service
+from app.services.lab_interpretation_service import LabInterpretationService
 from app.utils.validators import to_object_id
 
 router = APIRouter(prefix="/reports")
@@ -160,14 +161,24 @@ async def get_report_analysis(
 
     biomarkers: dict = {}
     if biomarker_doc:
-        exclude_keys = {"_id", "user_id", "report_id", "extracted_at"}
+        exclude_keys = {"_id", "user_id", "report_id", "extracted_at", "as_reported"}
         biomarkers = {k: v for k, v in biomarker_doc.items() if k not in exclude_keys and v is not None}
 
     # Prefer the rule engine's per-marker detail (value + unit + status + range)
     # over the bare name->value map, so clients can render status without
-    # re-deriving reference ranges themselves.
-    analysis_doc = await db["analyses"].find_one({"report_id": report_id})
-    marker_details = (analysis_doc or {}).get("rule_engine", {}).get("marker_details")
+    # re-deriving reference ranges themselves. It is recomputed from the stored
+    # values rather than read from the saved analysis -- it is cheap and
+    # deterministic -- so reports analysed before a rule-engine fix (such as
+    # blood counts printed in thousands) display correctly without a re-run.
+    numeric = {k: v for k, v in biomarkers.items() if isinstance(v, (int, float))}
+    reported = biomarker_doc.get("as_reported") if biomarker_doc else None
+    marker_details = None
+    if numeric or reported:
+        gender = (current_user.get("gender") or "male").lower()
+        marker_details = LabInterpretationService().interpret(numeric, gender, reported=reported)["marker_details"]
+    else:
+        analysis_doc = await db["analyses"].find_one({"report_id": report_id})
+        marker_details = (analysis_doc or {}).get("rule_engine", {}).get("marker_details")
     if isinstance(marker_details, dict) and marker_details:
         biomarkers = marker_details
 

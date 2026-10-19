@@ -399,8 +399,14 @@ export default function ReportAnalysisPage({
 
           {unclassified.length > 0 && (
             <p className="text-xs text-slate-500">
-              Not classified (no reference range available):{" "}
-              {unclassified.map((m) => `${m.label} ${m.value}${m.unit ? ` ${m.unit}` : ""}`).join(", ")}.
+              Not classified:{" "}
+              {unclassified
+                .map(
+                  (m) =>
+                    `${m.label} ${m.value}${m.unit ? ` ${m.unit}` : ""} (${m.note ?? "no reference range available"})`
+                )
+                .join("; ")}
+              .
             </p>
           )}
 

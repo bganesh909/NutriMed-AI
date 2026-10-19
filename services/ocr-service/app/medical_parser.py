@@ -44,24 +44,56 @@ class ParsedBiomarker:
 # Master biomarker patterns
 # ---------------------------------------------------------------------------
 
+# Blood counts are printed on several scales and with digit grouping, and the
+# unit is what tells the API which scale a value is on (backend
+# app/services/lab_units.py), so capture every common spelling.
+#: A count: "7.1", "7500", "7,500" or the Indian-grouped "2,50,000".
+COUNT_VALUE = r"(\d{1,3}(?:,\d{2,3})+|\d+\.?\d*)"
+_PER_VOLUME = r"(?:c\.?u\.?\s*mm|cmm|mm\s*(?:3|³)|[uµμ]\s*l|mcl)"
+#: x10^3/uL, 10³/µL, x10^9/L, lakhs/cumm, mill/cumm, cells/cumm, K/uL, G/L, /cumm ...
+COUNT_UNIT = (
+    r"("
+    + r"(?:x|×)?\s*10\s*(?:\^|\*|e)?\s*(?:3|6|9|12|³|⁶|⁹|¹²)\s*/\s*(?:"
+    + _PER_VOLUME
+    + r"|l)"
+    + r"|(?:lakhs?|lacs?|thou(?:sands?)?|mill(?:ions?)?|cells?)\s*/\s*"
+    + _PER_VOLUME
+    + r"|[kmgt]\s*/\s*(?:[uµμ]\s*l|l)"
+    + r"|/\s*"
+    + _PER_VOLUME
+    + r")"
+)
+COUNT_PATTERN = COUNT_VALUE + r"\s*" + COUNT_UNIT + "?"
+#: Hemoglobin in g/dL and its spellings, g/L or mmol/L.
+HEMOGLOBIN_PATTERN = r"(\d+\.?\d*)\s*(g/dL|gms?/dl|g%|gms?%|g/100\s*ml|g/L|gms?/L|mmol/L)?"
+
+
+def parse_number(text: str) -> float | None:
+    """A printed number, ignoring digit-grouping commas ("2,50,000")."""
+    try:
+        return float(text.replace(",", ""))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
 # Each entry: biomarker_key -> (name_pattern, value_with_unit_pattern)
 BIOMARKER_PATTERNS: dict[str, tuple[str, str]] = {
     # CBC
     "hemoglobin": (
         r"(?:ha?emoglobin|hgb|hb)\s*(?:\(%\))?",
-        r"(\d+\.?\d*)\s*(g/dL|gm/dl|g%|gm%)?",
+        HEMOGLOBIN_PATTERN,
     ),
     "rbc": (
         r"(?:r\.?b\.?c\.?|red\s*blood\s*cell|erythrocyte)\s*(?:count)?",
-        r"(\d+\.?\d*)\s*(mill/cumm|million/cumm|x10\^6/uL|mill\.?/cumm)?",
+        COUNT_PATTERN,
     ),
     "wbc": (
         r"(?:w\.?b\.?c\.?|white\s*blood\s*cell|total\s*leucocyte|tlc)\s*(?:count)?",
-        r"(\d+\.?\d*)\s*(/cumm|cells/cumm|x10\^3/uL|thou/cumm)?",
+        COUNT_PATTERN,
     ),
     "platelets": (
         r"(?:platelet|plt)\s*(?:count)?",
-        r"(\d+\.?\d*)\s*(lakh/cumm|lac/cumm|x10\^3/uL|thou/cumm|/cumm)?",
+        COUNT_PATTERN,
     ),
     "pcv": (
         r"(?:pcv|hematocrit|hct|packed\s*cell\s*volume)",
@@ -254,7 +286,8 @@ BIOMARKER_PATTERNS: dict[str, tuple[str, str]] = {
 # Reference range pattern (matches things like "13.0-17.0", "< 200", "> 40", "70 - 100")
 _REF_RANGE_PATTERN = re.compile(
     r"(?:"
-    r"(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)"  # range: 13.0-17.0
+    # range: "13.0-17.0", or grouped "1,50,000 - 4,50,000"
+    r"(\d{1,3}(?:,\d{2,3})+|\d+\.?\d*)\s*[-–—]\s*(\d{1,3}(?:,\d{2,3})+|\d+\.?\d*)"
     r"|[<>]\s*(\d+\.?\d*)"  # inequality: < 200
     r"|(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)\s*(mg/dL|g/dL|U/L|IU/L|mEq/L|mmol/L|ng/mL|pg/mL|%|fL|mIU/mL|ug/dL)?"
     r")"
@@ -333,10 +366,7 @@ class MedicalParser:
                 # Try to extract reference range from the remainder
                 ref_range = self._extract_reference_range(remainder, val_match.end())
 
-                try:
-                    value = float(value_str)
-                except (ValueError, TypeError):
-                    value = None
+                value = parse_number(value_str)
 
                 results.append(
                     ParsedBiomarker(
@@ -376,10 +406,7 @@ class MedicalParser:
 
                 ref_range = self._extract_reference_range(search_window, val_match.end())
 
-                try:
-                    value = float(value_str)
-                except (ValueError, TypeError):
-                    value = None
+                value = parse_number(value_str)
 
                 results.append(
                     ParsedBiomarker(
@@ -401,5 +428,5 @@ class MedicalParser:
         # Look for patterns like "13.0 - 17.0", "< 200", "(70-100)"
         ref_match = _REF_RANGE_PATTERN.search(search_text)
         if ref_match:
-            return ref_match.group(0).strip()
+            return ref_match.group(0).replace(",", "").strip()
         return ""

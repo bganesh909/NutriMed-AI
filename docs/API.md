@@ -372,7 +372,16 @@ Trigger OCR + AI analysis pipeline for a report.
 
 ### GET /reports/{report_id}/analysis
 
-Get the analysis results for a processed report.
+Get the analysis results for a processed report. Until the report is
+`completed` only `report_id` and `status` are returned.
+
+`biomarkers` maps each marker to its value, unit, status (`low`, `high`,
+`normal` or `unknown`) and reference range, recomputed on every request with
+the current rules. Blood counts and hemoglobin are shown on the scale the lab
+printed them in (e.g. `7.1 ×10³/µL`, `2.5 lakhs/µL`, `112 g/L`) and judged on
+one canonical scale; for WBC, platelets and RBC the lab's own printed range is
+used when present (`"source": "lab"`). A count whose scale cannot be worked
+out has `"status": "unknown"`, `"range": null` and a `note`.
 
 **Response (200):**
 
@@ -381,9 +390,11 @@ Get the analysis results for a processed report.
   "report_id": "664c...",
   "status": "completed",
   "biomarkers": {
-    "hemoglobin": 14.5,
-    "vitamin_d": 22.0,
-    "ldl": 120.0
+    "hemoglobin": {"value": 11.2, "unit": "g/dL", "status": "low", "range": "13.0-17.0", "source": "standard"},
+    "wbc": {"value": 7.1, "unit": "×10³/µL", "status": "normal", "range": "4-11", "source": "lab"},
+    "platelets": {"value": 7.0, "unit": "", "status": "unknown", "range": null,
+                  "note": "unit unclear; compare with the range printed on your report"},
+    "vitamin_d": {"value": 22.0, "unit": "ng/mL", "status": "low", "range": "30-100"}
   },
   "deficiencies": ["Vitamin D insufficiency"],
   "risk_factors": ["Borderline high LDL"],

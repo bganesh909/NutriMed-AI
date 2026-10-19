@@ -42,8 +42,9 @@ _OCR_CHAR_FIXES: list[tuple[str, str]] = [
     (r"\b/cumm\b", "/cumm"),
     (r"\bcells/cumm\b", "cells/cumm"),
     (r"\blac\b", "lakh"),
-    # Fix decimal points that got turned into commas in numbers < 100
-    (r"(\d{1,2}),(\d{1,2})(?!\d)", r"\1.\2"),
+    # Fix decimal points that got turned into commas in numbers < 100 ("12,5").
+    # Not inside digit grouping: the Indian "2,50,000" must stay 250000, not 2.5.
+    (r"(?<![\d,])(\d{1,2}),(\d{1,2})(?![\d,])", r"\1.\2"),
 ]
 
 # ---------------------------------------------------------------------------

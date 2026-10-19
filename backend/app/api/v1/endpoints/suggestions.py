@@ -94,7 +94,9 @@ async def get_suggestions(
                 markers = {k: v for k, v in biomarkers.items() if k not in exclude and isinstance(v, (int, float))}
                 if markers:
                     rule_engine = LabInterpretationService().interpret(
-                        markers, (context.get("gender") or "male").lower()
+                        markers,
+                        (context.get("gender") or "male").lower(),
+                        reported=biomarkers.get("as_reported"),
                     )
 
     goals = context.get("goals") or []

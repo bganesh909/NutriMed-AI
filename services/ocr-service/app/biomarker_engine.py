@@ -10,7 +10,7 @@ import logging
 import re
 from dataclasses import dataclass
 
-from app.medical_parser import ParsedBiomarker
+from app.medical_parser import COUNT_PATTERN, HEMOGLOBIN_PATTERN, ParsedBiomarker, parse_number
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,9 @@ class BaseReportParser:
     REFERENCES: dict[str, ReferenceInfo] = {}
 
     # Common reference-range pattern found after the value
-    _REF_RANGE_RE = re.compile(r"[\(\[]?\s*(\d+\.?\d*)\s*[-–—]\s*(\d+\.?\d*)\s*[\)\]]?")
+    _REF_RANGE_RE = re.compile(
+        r"[\(\[]?\s*(\d{1,3}(?:,\d{2,3})+|\d+\.?\d*)\s*[-–—]\s*(\d{1,3}(?:,\d{2,3})+|\d+\.?\d*)\s*[\)\]]?"
+    )
 
     def parse(self, text: str) -> list[ParsedBiomarker]:
         """Extract all markers this parser knows about from the text."""
@@ -156,29 +158,25 @@ class BaseReportParser:
         val_match: re.Match,
         context: str,
     ) -> ParsedBiomarker:
-        """Build a ParsedBiomarker from regex matches."""
+        """
+        Build a ParsedBiomarker from regex matches.
+
+        Unit and reference range are only what the report printed. Filling in
+        this parser's defaults would mislabel a count printed in thousands
+        ("7.1") with an absolute unit ("/cumm"), and the API trusts both.
+        """
         value_str = val_match.group(1)
         unit = ""
         if val_match.lastindex and val_match.lastindex >= 2 and val_match.group(2):
             unit = val_match.group(2).strip()
 
-        # Use default unit from REFERENCES if not detected
-        ref = self.REFERENCES.get(canonical)
-        if not unit and ref:
-            unit = ref.unit
+        value = parse_number(value_str)
 
-        try:
-            value = float(value_str)
-        except (ValueError, TypeError):
-            value = None
-
-        # Extract reference range from context
         ref_range = ""
         ref_range_m = self._REF_RANGE_RE.search(context[val_match.end() :])
         if ref_range_m:
-            ref_range = f"{ref_range_m.group(1)} - {ref_range_m.group(2)}"
-        elif ref:
-            ref_range = ref.range_str
+            low, high = (g.replace(",", "") for g in ref_range_m.groups())
+            ref_range = f"{low} - {high}"
 
         return ParsedBiomarker(
             test_name=name_match.group(0).strip(),
@@ -208,19 +206,19 @@ class CBCParser(BaseReportParser):
     MARKERS = {
         "hemoglobin": [
             r"ha?emoglobin|hgb|hb(?:\s*%)?",
-            r"(\d+\.?\d*)\s*(g/dL|gm/dl|g%|gm%)?",
+            HEMOGLOBIN_PATTERN,
         ],
         "rbc": [
             r"r\.?b\.?c\.?|red\s*blood\s*cell|erythrocyte\s*count",
-            r"(\d+\.?\d*)\s*(mill/cumm|million/cumm|x10\^6/uL)?",
+            COUNT_PATTERN,
         ],
         "wbc": [
             r"w\.?b\.?c\.?|white\s*blood\s*cell|total\s*leucocyte|tlc",
-            r"(\d+\.?\d*)\s*(/cumm|cells/cumm|x10\^3/uL|thou/cumm)?",
+            COUNT_PATTERN,
         ],
         "platelets": [
             r"platelet[s]?|plt",
-            r"(\d+\.?\d*)\s*(lakh/cumm|lac/cumm|x10\^3/uL|thou/cumm|/cumm)?",
+            COUNT_PATTERN,
         ],
         "pcv": [
             r"pcv|hematocrit|hct|packed\s*cell\s*volume",
@@ -661,6 +659,27 @@ for _parser in ALL_PARSERS:
     for _name, _ref in _parser.REFERENCES.items():
         MERGED_REFERENCES.setdefault(_name, _ref)
 
+_SCALE_SENSITIVE = {"wbc", "platelets", "rbc", "hemoglobin"}
+
+#: Spellings of the default reference units, for _unit_key.
+_UNIT_SYNONYMS = {
+    "gm/dl": "g/dl",
+    "gms/dl": "g/dl",
+    "g%": "g/dl",
+    "gm%": "g/dl",
+    "lac/cumm": "lakh/cumm",
+    "lacs/cumm": "lakh/cumm",
+    "lakhs/cumm": "lakh/cumm",
+    "million/cumm": "mill/cumm",
+    "cells/cumm": "/cumm",
+}
+
+
+def _unit_key(unit: str | None) -> str:
+    key = re.sub(r"\s+", "", (unit or "").lower())
+    return _UNIT_SYNONYMS.get(key, key)
+
+
 _PRINTED_RANGE_RE = re.compile(r"^\s*(-?\d+\.?\d*)\s*(?:-|–|to)\s*(-?\d+\.?\d*)\s*$", re.IGNORECASE)
 
 
@@ -683,5 +702,9 @@ def evaluate_status_for(bio: ParsedBiomarker) -> str:
 
     ref = MERGED_REFERENCES.get(bio.canonical_name)
     if ref:
+        # Counts and hemoglobin are printed on several scales (x10^3/uL, lakhs,
+        # g/L); the default range applies only when the report used its unit.
+        if bio.canonical_name in _SCALE_SENSITIVE and _unit_key(bio.unit) != _unit_key(ref.unit):
+            return "unknown"
         return _evaluate_status(bio.value, ref)
     return "unknown"

@@ -73,15 +73,19 @@ export function toBiomarkers(
       reference_max: bounds.max,
       status: STATUS_LABEL[d.status] ?? "Normal",
       category: "",
+      rangeSource: d.source,
     });
   }
   return out;
 }
 
-/** Markers the rule engine could not classify (no reference range known). */
+/**
+ * Markers the rule engine could not classify: no reference range is known,
+ * or (`note`) the value's unit was unclear.
+ */
 export function unclassifiedMarkers(
   details: Record<string, MarkerDetail> | null | undefined
-): { key: string; label: string; value: number; unit: string }[] {
+): { key: string; label: string; value: number; unit: string; note?: string }[] {
   if (!details) return [];
   return Object.entries(details)
     .filter(([, d]) => !parseRange(d.range) && typeof d.value === "number")
@@ -90,5 +94,6 @@ export function unclassifiedMarkers(
       label: markerLabel(key),
       value: d.value,
       unit: d.unit && d.unit !== "unknown" ? d.unit : "",
+      note: d.note,
     }));
 }

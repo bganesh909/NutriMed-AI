@@ -82,3 +82,18 @@ describe("unclassifiedMarkers", () => {
     expect(unclassifiedMarkers({ hemoglobin: detail() })).toEqual([]);
   });
 });
+
+describe("range source and unclear units", () => {
+  it("carries where the range came from", () => {
+    const [row] = toBiomarkers({ wbc: { value: 7.1, unit: "×10³/µL", status: "normal", range: "4-11", source: "lab" } });
+    expect(row.rangeSource).toBe("lab");
+  });
+
+  it("explains why a count was not classified", () => {
+    const rows = unclassifiedMarkers({
+      platelets: { value: 7, unit: "", status: "unknown", range: null, note: "unit unclear; compare with the range printed on your report" },
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].note).toMatch(/unit unclear/);
+  });
+});
