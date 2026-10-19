@@ -51,7 +51,7 @@ clean: ## Remove all containers, volumes, and images
 	docker compose down -v --rmi local
 
 dev-backend: ## Run backend in development mode
-	cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+	cd backend && DEBUG=true uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 dev-frontend: ## Run frontend in development mode
 	cd frontend && npm run dev

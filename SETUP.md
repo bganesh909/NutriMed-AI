@@ -129,5 +129,8 @@ pkill -f "port 8010"; pkill -f "port 8001"; pkill -f "next dev -p 3010"; pkill -
   no `.env`), so config comes from `backend/app/core/config.py` defaults — database
   `nutrimed_ai`, which holds the seed data.
 - Celery uses Redis (`redis://localhost:6379/1`) as its broker, not RabbitMQ.
+- `DEBUG=true` also lets the API start with the built-in placeholder `JWT_SECRET`
+  and `AES_KEY`. Without it the API refuses to start until both are replaced
+  (see `docs/DEPLOYMENT.md`); that is intended for production.
 - After changing worker code, restart the Celery worker; unlike uvicorn `--reload`
   it does not pick up changes on its own.

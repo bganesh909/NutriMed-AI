@@ -111,8 +111,9 @@ pip install -r requirements.txt
 # Start MongoDB, Redis, RabbitMQ locally (or via Docker)
 docker compose up -d mongo redis rabbitmq
 
-# Run the API server
-uvicorn app.main:app --reload --port 8000
+# Run the API server. DEBUG=true is for local development only: among other
+# things it lets the API start with the placeholder JWT_SECRET / AES_KEY.
+DEBUG=true uvicorn app.main:app --reload --port 8000
 ```
 
 ### Frontend

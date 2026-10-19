@@ -42,6 +42,11 @@ _configure_logging()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
+    # First, so a production deployment with placeholder secrets fails fast.
+    from app.core.secrets_check import enforce_secrets
+
+    enforce_secrets(settings)
+
     logger.info("Connecting to MongoDB...")
     await connect_mongo()
     logger.info("MongoDB connected.")
