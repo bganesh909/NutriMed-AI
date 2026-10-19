@@ -222,6 +222,20 @@ class TestAdmin:
     async def test_regular_user_forbidden(self, client: AsyncClient, auth_headers):
         assert (await client.get("/api/v1/admin/stats", headers=auth_headers)).status_code == 403
         assert (await client.get("/api/v1/admin/users", headers=auth_headers)).status_code == 403
+        assert (await client.get("/api/v1/admin/client-ip", headers=auth_headers)).status_code == 403
+
+    async def test_client_ip_shows_the_recorded_address_and_proxy_headers(self, client: AsyncClient, test_db):
+        _, headers = await self._admin_headers(test_db)
+        resp = await client.get(
+            "/api/v1/admin/client-ip", headers={**headers, "X-Forwarded-For": "203.0.113.9, 198.51.100.7"}
+        )
+        assert resp.status_code == 200
+        body = resp.json()
+        # CLIENT_IP_HEADER is unset in tests, so the connecting address is kept.
+        assert body["client_ip"] == "127.0.0.1"
+        assert body["client_ip_header"] is None
+        assert body["headers"]["x-forwarded-for"] == "203.0.113.9, 198.51.100.7"
+        assert body["headers"]["cf-connecting-ip"] is None
 
     async def test_stats_and_users(self, client: AsyncClient, test_user, test_db, tmp_path):
         _, headers = await self._admin_headers(test_db)

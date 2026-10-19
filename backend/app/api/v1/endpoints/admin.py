@@ -7,10 +7,11 @@ Admins see account metadata and counts, never report contents or biomarkers.
 import re
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 
+from app.core.config import settings
 from app.core.dependencies import get_db, require_role
 from app.models.user import UserRole
 from app.services import account_service
@@ -44,6 +45,33 @@ async def get_stats(
         "diet_plans": await db["diet_plans"].count_documents({}),
         "workout_plans": await db["workout_plans"].count_documents({}),
         "progress_entries": await db["progress"].count_documents({}),
+    }
+
+
+# Headers hosting proxies use to pass on the visitor's address and scheme.
+_PROXY_HEADERS = (
+    "x-forwarded-for",
+    "x-forwarded-proto",
+    "cf-connecting-ip",
+    "true-client-ip",
+    "x-real-ip",
+    "forwarded",
+)
+
+
+@router.get("/client-ip")
+async def get_client_ip(request: Request, _: dict = Depends(_admin)):
+    """
+    The address the API records for this request (rate limiting, audit log)
+    and the proxy headers it arrived with, for checking CLIENT_IP_HEADER after
+    deploying behind a hosting proxy (docs/DEPLOY_RENDER_VERCEL.md).
+    """
+    return {
+        "client_ip": request.client.host if request.client else None,
+        "scheme": request.url.scheme,
+        "client_ip_header": settings.CLIENT_IP_HEADER or None,
+        "client_ip_hops": settings.CLIENT_IP_HOPS,
+        "headers": {name: ", ".join(request.headers.getlist(name)) or None for name in _PROXY_HEADERS},
     }
 
 

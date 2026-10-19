@@ -248,6 +248,11 @@ pytest tests/integration/ -v
 pytest tests/ --cov=app --cov-report=term-missing
 ```
 
+## Deployment
+
+- One Linux server with Docker Compose, nginx and a local model: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
+- Render + Vercel + MongoDB Atlas + Groq, defined in [render.yaml](render.yaml): [docs/DEPLOY_RENDER_VERCEL.md](docs/DEPLOY_RENDER_VERCEL.md)
+
 ## Troubleshooting
 
 ### MongoDB connection refused

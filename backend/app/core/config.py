@@ -1,4 +1,6 @@
-from pydantic import Field
+import re
+
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -50,6 +52,9 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: list[str] = Field(default=["http://localhost:3000", "http://localhost:5173"])
+    # Optional pattern for further origins, such as Vercel preview deployments:
+    # ^https://nutrimed-[a-z0-9-]+-your-team\.vercel\.app$
+    ALLOWED_ORIGIN_REGEX: str = ""
 
     # Public URL of the web app, used to build links in emails (password reset).
     # A request's Origin header wins when it is one of ALLOWED_ORIGINS.
@@ -58,6 +63,14 @@ class Settings(BaseSettings):
 
     # How long request audit logs are kept before MongoDB expires them.
     AUDIT_LOG_RETENTION_DAYS: int = 365
+
+    # Where the visitor's IP address comes from, for rate limiting and the
+    # audit log (app/middleware/client_ip.py). Empty: the connecting address,
+    # which is right behind our nginx. Behind a hosting proxy such as Render's,
+    # the header that proxy sets; the address is read CLIENT_IP_HOPS entries
+    # from the right of it, so whatever a client sends in it is ignored.
+    CLIENT_IP_HEADER: str = ""
+    CLIENT_IP_HOPS: int = Field(default=1, ge=1)
 
     # Outgoing email. With SMTP_HOST unset, emails are written to the log
     # instead of being sent (local development).
@@ -76,6 +89,22 @@ class Settings(BaseSettings):
         # (NEXT_PUBLIC_API_URL, ...); keys this class does not define are not errors.
         "extra": "ignore",
     }
+
+    @field_validator("OCR_SERVICE_URL")
+    @classmethod
+    def _default_ocr_scheme(cls, value: str) -> str:
+        # Render gives a private service's address as host:port, without a scheme.
+        value = value.strip().rstrip("/")
+        return value if "://" in value else f"http://{value}"
+
+    @field_validator("ALLOWED_ORIGIN_REGEX")
+    @classmethod
+    def _valid_origin_regex(cls, value: str) -> str:
+        try:
+            re.compile(value)
+        except re.error as exc:
+            raise ValueError(f"not a valid regular expression: {exc}") from exc
+        return value
 
 
 settings = Settings()

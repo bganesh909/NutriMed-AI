@@ -4,6 +4,9 @@ NutriMed AI runs on a single Linux server with Docker Compose, behind nginx
 with a Let's Encrypt certificate. GitHub Actions builds the images and deploys
 over SSH.
 
+To host on Render and Vercel instead (no server to manage, hosted AI model),
+see [DEPLOY_RENDER_VERCEL.md](DEPLOY_RENDER_VERCEL.md).
+
 ## 1. What runs where
 
 `docker-compose.yml` is the development setup; `docker-compose.prod.yml` layers

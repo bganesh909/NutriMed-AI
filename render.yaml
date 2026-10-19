@@ -1,0 +1,163 @@
+# Render Blueprint for NutriMed AI: the API, the report worker, the OCR service
+# and Redis. MongoDB runs on MongoDB Atlas and the web app on Vercel. The full
+# walkthrough is docs/DEPLOY_RENDER_VERCEL.md.
+#
+# Render asks for each "sync: false" value when the Blueprint is created and
+# never changes it afterwards. Every other value here is reapplied on each
+# Blueprint sync, replacing Dashboard edits. Variables added only in the
+# Dashboard (SMTP_*, ALLOWED_ORIGIN_REGEX) are kept.
+#
+# Plans: the API and Redis are free. The free API sleeps after 15 minutes
+# without traffic, and the next request takes about a minute. Render has no
+# free background workers or private services, so the worker and the OCR
+# service are Starter instances (0.5 CPU, 512 MB, about $7 a month each).
+# The region cannot be changed later.
+
+envVarGroups:
+  - name: nutrimed-shared
+    envVars:
+      # Generated once, when the Blueprint is created. Copy both into a
+      # password manager: uploaded reports are encrypted with AES_KEY and
+      # cannot be read without it.
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AES_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: MONGO_DB_NAME
+        value: nutrimed
+      # Groq. Only de-identified data is sent (app/services/llm_client.py).
+      - key: LLM_PROVIDER
+        value: openai
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: llama-3.3-70b-versatile
+
+services:
+  - type: web
+    name: nutrimed-api
+    runtime: docker
+    region: singapore
+    plan: free
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - fromGroup: nutrimed-shared
+      # The port the image's uvicorn listens on.
+      - key: PORT
+        value: "8000"
+      - key: MONGO_URI
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      # A JSON list, e.g. ["https://nutrimed.vercel.app"]
+      - key: ALLOWED_ORIGINS
+        sync: false
+      # The web app's address, used in password-reset links.
+      - key: FRONTEND_URL
+        sync: false
+      # Render's edge (Cloudflare) passes the visitor's address in this
+      # header. Check it after the first deploy: guide, section 7.
+      - key: CLIENT_IP_HEADER
+        value: CF-Connecting-IP
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: nutrimed-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: nutrimed-redis
+          property: connectionString
+      - key: OCR_SERVICE_URL
+        fromService:
+          type: pserv
+          name: nutrimed-ocr
+          property: hostport
+
+  - type: worker
+    name: nutrimed-worker
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A app.core.celery_app worker -l info -Q reports,ai,notifications -c 2
+    # Lets a report that is being analysed finish before a deploy stops the
+    # worker (the default is 30 seconds).
+    maxShutdownDelaySeconds: 300
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - backend/**
+    envVars:
+      - fromGroup: nutrimed-shared
+      # Entered once, on the API.
+      - key: MONGO_URI
+        fromService:
+          type: web
+          name: nutrimed-api
+          envVarKey: MONGO_URI
+      - key: LLM_API_KEY
+        fromService:
+          type: web
+          name: nutrimed-api
+          envVarKey: LLM_API_KEY
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: nutrimed-redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: nutrimed-redis
+          property: connectionString
+      - key: OCR_SERVICE_URL
+        fromService:
+          type: pserv
+          name: nutrimed-ocr
+          property: hostport
+
+  # Reachable only from the API and the worker, over Render's private network.
+  - type: pserv
+    name: nutrimed-ocr
+    runtime: docker
+    region: singapore
+    plan: starter
+    dockerfilePath: ./services/ocr-service/Dockerfile
+    dockerContext: ./services/ocr-service
+    # One process, to fit in 512 MB (the image's default starts two).
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 8001 --workers 1
+    autoDeployTrigger: checksPass
+    buildFilter:
+      paths:
+        - services/ocr-service/**
+    envVars:
+      - key: PORT
+        value: "8001"
+      # Docker build argument: skip the large PaddleOCR install; the service
+      # then uses Tesseract.
+      - key: INSTALL_PADDLE
+        value: "false"
+
+  # Celery's queue and the rate limiter's counters. The free plan has 25 MB
+  # and keeps nothing on disk: a restart drops queued jobs, and their reports
+  # must be analysed again.
+  - type: keyvalue
+    name: nutrimed-redis
+    region: singapore
+    plan: free
+    # When memory runs out, evict only keys that expire anyway (rate-limit
+    # counters, task results), never queued jobs.
+    maxmemoryPolicy: volatile-lru
+    # No access from the internet; the services connect over the private network.
+    ipAllowList: []

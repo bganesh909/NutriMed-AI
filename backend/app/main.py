@@ -92,6 +92,11 @@ app = FastAPI(
     version="1.0.0",
     debug=settings.DEBUG,
     lifespan=lifespan,
+    # Interactive API docs only in development. Hosted without nginx (Render)
+    # they would otherwise be public.
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url="/redoc" if settings.DEBUG else None,
+    openapi_url="/openapi.json" if settings.DEBUG else None,
 )
 
 # ---------------------------------------------------------------------------
@@ -130,10 +135,14 @@ async def log_requests(request: Request, call_next):
 # ---------------------------------------------------------------------------
 
 from app.middleware.audit_logging import AuditLoggingMiddleware  # noqa: E402
+from app.middleware.client_ip import ClientIPMiddleware  # noqa: E402
 from app.middleware.rate_limiting import RateLimitingMiddleware  # noqa: E402
 
 app.add_middleware(AuditLoggingMiddleware)
 app.add_middleware(RateLimitingMiddleware, max_requests=60, window_seconds=60)
+# Outside the two above, so both see the visitor's address rather than a
+# hosting proxy's (no-op unless CLIENT_IP_HEADER is set).
+app.add_middleware(ClientIPMiddleware, header=settings.CLIENT_IP_HEADER, hops=settings.CLIENT_IP_HOPS)
 
 # Added last = outermost. Preflight requests are then answered before the rate
 # limiter counts them, and responses produced by inner middleware (such as a
@@ -141,6 +150,7 @@ app.add_middleware(RateLimitingMiddleware, max_requests=60, window_seconds=60)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
+    allow_origin_regex=settings.ALLOWED_ORIGIN_REGEX or None,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

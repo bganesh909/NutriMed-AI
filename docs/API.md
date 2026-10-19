@@ -741,6 +741,10 @@ Admin role only (403 otherwise). Exposes account metadata and counts, never repo
 
 Counts of users, reports (total, last 7 days, by status), plans and progress entries.
 
+### GET /admin/client-ip
+
+The address the API records for this request (used by the rate limiter and the audit log), the scheme, the `CLIENT_IP_HEADER` / `CLIENT_IP_HOPS` settings, and the proxy headers the request arrived with (`x-forwarded-for`, `x-forwarded-proto`, `cf-connecting-ip`, `true-client-ip`, `x-real-ip`, `forwarded`). For checking the setup behind a hosting proxy; see `docs/DEPLOY_RENDER_VERCEL.md`.
+
 ### GET /admin/users
 
 Users, newest first, with their report counts. Query: `q` (name or email contains), `limit` (default 100).
