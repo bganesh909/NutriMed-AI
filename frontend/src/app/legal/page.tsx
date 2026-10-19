@@ -87,9 +87,12 @@ export default function LegalPage() {
             <ul className="list-disc space-y-1.5 pl-5">
               <li>Uploaded report files are encrypted at rest.</li>
               <li>
-                Reports are analysed by AI models running on NutriMed AI&apos;s own servers. Your health data is
-                not sent to third-party AI services and is never sold or used for advertising.
+                Results are analysed by AI models, which may be run by a third-party AI provider acting on our
+                behalf. Only de-identified health information is sent to it, such as lab values, age, sex, body
+                measurements, activity level, goals, diet preference, and the conditions, medications, allergies
+                and injuries you entered. Your name, contact details and the report file itself are never sent.
               </li>
+              <li>Your data is never sold or used for advertising.</li>
               <li>
                 Administrators can see account details (name, email, role, number of reports) to run the service,
                 but not the contents of your reports.

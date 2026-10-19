@@ -20,13 +20,14 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml <command>
 | api-gateway | FastAPI | No (only through nginx) |
 | celery-worker | Report pipeline and on-request plans | No |
 | ocr-service | Text extraction from reports | No |
-| ollama | Local LLM (GPU) | No |
+| ollama | Local LLM (GPU); not needed with a hosted model such as Groq | No |
 | mongo | Database, with a root user from `.env` | No |
 | redis | Celery broker, rate limiting | No |
 
-Uploaded reports are stored, encrypted with `AES_KEY`, in the `uploads_data`
-volume shared by the API and the worker. RabbitMQ and celery-beat are not
-started in production (Celery uses Redis; there are no periodic tasks).
+Uploaded reports are stored encrypted with `AES_KEY` in MongoDB (GridFS), so
+the API and the worker need no shared disk and the database backup includes
+them. RabbitMQ and celery-beat are not started in production (Celery uses
+Redis; there are no periodic tasks).
 
 ## 2. Prerequisites
 
@@ -73,6 +74,7 @@ Edit `.env`. Generate each secret with
 | `FRONTEND_URL` | `https://app.example.com` |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | From your email provider |
 | `OLLAMA_MODEL` | `mistral:7b` unless you choose another model |
+| `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | Optional: a hosted model instead of Ollama, e.g. Groq (`openai`, `https://api.groq.com/openai/v1`, your key, `llama-3.3-70b-versatile`). Then add `--scale ollama=0`. Only de-identified data is sent. Free tiers are rate-limited, and some providers' terms let them use what you send to train models; for real patients use a paid plan whose terms rule that out. |
 
 > **Keep `AES_KEY` and `JWT_SECRET` in a password manager.** Uploaded reports
 > are encrypted with `AES_KEY`; if it is lost or changed, they cannot be read.
@@ -159,8 +161,8 @@ Sign out and back in; the Admin console appears in the sidebar.
 
 ## 7. Backups
 
-Back up the database **and** the uploaded reports, and copy the archives off
-the server (for example to object storage). Save as
+Back up the database (it includes the uploaded reports, stored in GridFS) and
+copy the archives off the server (for example to object storage). Save as
 `/opt/nutrimed-ai/backup.sh` and run it daily from root's crontab
 (`0 2 * * * /opt/nutrimed-ai/backup.sh`):
 
@@ -177,17 +179,12 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mongo sh
   'mongodump --quiet -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip' \
   > "$BACKUP_DIR/mongo_$STAMP.archive.gz"
 
-# Uploaded reports (still encrypted with AES_KEY). The volume is named
-# <project folder>_uploads_data; check with: docker volume ls
-docker run --rm -v nutrimed-ai_uploads_data:/data:ro -v "$BACKUP_DIR":/backup alpine \
-  tar czf "/backup/uploads_$STAMP.tar.gz" -C /data .
-
 find "$BACKUP_DIR" -type f -mtime +30 -delete
 ```
 
 Restore the database with
 `... exec -T mongo sh -c 'mongorestore -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" --authenticationDatabase admin --archive --gzip --drop' < mongo_<stamp>.archive.gz`,
-and uploads by extracting the tarball back into the volume. Redis holds only
+which restores the uploaded reports with it. Redis holds only
 queues and rate-limit counters and needs no backup.
 
 ## 8. Continuous deployment (GitHub Actions)
@@ -247,6 +244,6 @@ or a managed service (MongoDB Atlas) and point the API at it.
 - [ ] TLS certificate issued; renewals switched to webroot; `certbot renew --dry-run` passes
 - [ ] Model pulled; `/health/ready` shows `llm`, `ocr` and `mongodb` ok
 - [ ] Admin account created by promotion (seed script **not** run)
-- [ ] Daily backups of MongoDB **and** uploads, copied off the server
+- [ ] Daily MongoDB backups (uploads included), copied off the server
 - [ ] Uptime monitoring on `/health`
 - [ ] `/legal` reviewed by a lawyer, with a real contact address

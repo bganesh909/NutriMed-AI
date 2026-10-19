@@ -26,7 +26,10 @@ class ReportModel(BaseModel):
     id: str | None = Field(default=None, alias="_id")
     user_id: str
     report_type: ReportType
-    file_path: str
+    #: The encrypted upload in GridFS (app/services/report_files.py).
+    file_id: str | None = None
+    #: Reports uploaded before GridFS kept the encrypted file on local disk.
+    file_path: str | None = None
     original_filename: str
     status: ReportStatus = ReportStatus.UPLOADED
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(UTC))

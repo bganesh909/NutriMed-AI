@@ -1,20 +1,14 @@
-import os
-import uuid
-
 from fastapi import APIRouter, Depends, Form, HTTPException, UploadFile, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.dependencies import get_current_user, get_db
-from app.core.security import encrypt_data
 from app.models.report import ReportModel, ReportStatus, ReportType
 from app.schemas.report import ReportAnalysisResponse, ReportResponse
-from app.services import account_service
+from app.services import account_service, report_files
 from app.services.lab_interpretation_service import LabInterpretationService
 from app.utils.validators import to_object_id
 
 router = APIRouter(prefix="/reports")
-
-UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "uploads")
 
 
 @router.post("/upload", response_model=ReportResponse, status_code=status.HTTP_201_CREATED)
@@ -24,20 +18,13 @@ async def upload_report(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
     content = await file.read()
-    encrypted = encrypt_data(content)
-    filename = f"{uuid.uuid4().hex}_{file.filename}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
-
-    with open(file_path, "wb") as f:
-        f.write(encrypted)
+    file_id = await report_files.save(db, content, file.filename or "report", current_user["id"])
 
     report = ReportModel(
         user_id=current_user["id"],
         report_type=report_type,
-        file_path=file_path,
+        file_id=file_id,
         original_filename=file.filename or "unknown",
         status=ReportStatus.UPLOADED,
     )
@@ -126,7 +113,7 @@ async def trigger_analysis(
     try:
         from app.workers.ocr_worker import process_ocr
 
-        process_ocr.delay(report_id, doc["file_path"])
+        process_ocr.delay(report_id)
     except (ImportError, Exception) as exc:
         # Workers module may not be available in dev; revert status
         await db["reports"].update_one(

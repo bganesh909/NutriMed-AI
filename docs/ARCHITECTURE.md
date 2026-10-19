@@ -3,9 +3,10 @@
 ## What actually runs
 
 ```
-Next.js (:3000) ──► FastAPI API gateway (:8000) ──┬──► MongoDB
+Next.js (:3000) ──► FastAPI API gateway (:8000) ──┬──► MongoDB (data + report files in GridFS)
                                                    ├──► Redis (cache + Celery broker)
-                                                   ├──► Ollama (:11434)   [direct HTTP]
+                                                   ├──► LLM: Ollama (:11434) or an
+                                                   │    OpenAI-compatible API (e.g. Groq)
                                                    └──► OCR service (:8001)
                                                             ▲
 Celery worker ──────────────────────────────────────────────┘
@@ -13,8 +14,11 @@ Celery worker ──────────────────────
 
 The API gateway is a modular monolith. It implements nutrition maths, workout
 generation, lab interpretation and PDF rendering **in-process**
-(`app/services/*.py`) and calls Ollama directly for LLM work. The only network
-service it depends on is the OCR service.
+(`app/services/*.py`). Every LLM call goes through `app/services/llm_client.py`
+(`LLM_PROVIDER`: `ollama` or `openai`), which sends only de-identified data.
+Uploaded reports are stored encrypted in MongoDB GridFS
+(`app/services/report_files.py`), so the API and the worker share no disk.
+The only other network service it depends on is the OCR service.
 
 ## The `services/` directory
 
@@ -113,7 +117,7 @@ is what made the degradation invisible in the first place.
   "checks": {
     "mongodb": "ok",
     "grounding": {"ok": true, "foods": 113, "exercises": 81, "problems": []},
-    "llm": {"status": "model_not_pulled", "model": "mistral:7b", "available": ["llama3:latest"]},
+    "llm": {"provider": "ollama", "model": "mistral:7b", "status": "model_not_available", "available": ["llama3:latest"]},
     "ocr": {"status": "ok", "engine": "tesseract"},
     "generation_quality": {"window_days": 7, "kinds": {"diet": {"llm_verified": 40, "template_fallback": 2, "fallback_rate": 0.048}}}
   }
@@ -137,13 +141,15 @@ Every diet and workout generation writes one document to
 **A rising `fallback_rate` is the signal to investigate.** It means the model is
 no longer contributing and users are receiving generic template plans. Common
 causes: `OLLAMA_MODEL` naming a model that was never pulled, Ollama out of
-memory, or a timeout that is too low for the hardware.
+memory, a timeout that is too low for the hardware, or a hosted provider's
+rate limits (free tiers) or an expired API key.
 
 ### Configuration that must be right
 
 | Variable | Why it matters |
 |---|---|
-| `OLLAMA_MODEL` | Must name a model Ollama has actually pulled. If not, every plan falls back silently. Set explicitly in `.env` and compose; `init-ollama.sh` pulls it. |
+| `OLLAMA_MODEL` | With `LLM_PROVIDER=ollama`: must name a model Ollama has actually pulled. If not, every plan falls back silently. Set explicitly in `.env` and compose; `init-ollama.sh` pulls it. |
+| `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` | With `LLM_PROVIDER=openai`: the hosted API (e.g. Groq). `/health/ready` checks the key works and the model is listed. |
 | `LLM_TIMEOUT_SECONDS` | Default 300. A 7B model on CPU needs minutes for the longer prompts; too low means permanent fallback. |
 | `LOG_LEVEL` | Default INFO. Below this the degradation warnings disappear. |
 

@@ -11,20 +11,18 @@ import logging
 import re
 from datetime import UTC, datetime
 
-import httpx
 from bson import ObjectId
 from pymongo import MongoClient
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
+from app.services import llm_client
 from app.services.lab_interpretation_service import (
     LabInterpretationService,
     canonicalise_marker,
 )
 
 logger = logging.getLogger(__name__)
-
-LLM_TIMEOUT_SECONDS = settings.LLM_TIMEOUT_SECONDS
 
 
 def _get_db():
@@ -33,16 +31,8 @@ def _get_db():
 
 
 def _call_llm_sync(prompt: str) -> str:
-    """Synchronous call to Ollama for use inside Celery tasks."""
-    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-    payload = {
-        "model": settings.OLLAMA_MODEL,
-        "prompt": prompt,
-        "stream": False,
-    }
-    response = httpx.post(url, json=payload, timeout=LLM_TIMEOUT_SECONDS)
-    response.raise_for_status()
-    return response.json().get("response", "")
+    """Blocking call to the configured model, for use inside Celery tasks."""
+    return llm_client.complete_sync(prompt)
 
 
 def _build_analysis_prompt(markers: dict, user: dict, rule_result: dict | None = None) -> str:

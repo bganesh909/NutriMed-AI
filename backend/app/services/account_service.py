@@ -3,17 +3,14 @@ Deletion of a user's medical data.
 
 Reports and everything derived from them (biomarkers, analyses,
 recommendations, suggestions, report-linked plans) are removed together, as is
-the encrypted upload on disk. Audit logs are kept: they are the security
-record of who accessed what, not health data.
+the encrypted upload (app/services/report_files.py). Audit logs are kept: they
+are the security record of who accessed what, not health data.
 """
-
-import logging
-import os
 
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-logger = logging.getLogger(__name__)
+from app.services import report_files
 
 # Collections whose documents hang off a report via ``report_id``.
 _REPORT_LINKED = ("biomarkers", "analyses", "suggestions", "diet_plans", "workout_plans", "generation_metrics")
@@ -35,17 +32,6 @@ _USER_OWNED = (
 )
 
 
-def _remove_file(path: str | None) -> None:
-    if not path:
-        return
-    try:
-        os.remove(path)
-    except FileNotFoundError:
-        pass
-    except OSError:
-        logger.exception("Could not delete report file %s", path)
-
-
 async def delete_report(db: AsyncIOMotorDatabase, report_doc: dict) -> None:
     """Delete one report, its upload and all data derived from it."""
     report_id = str(report_doc["_id"])
@@ -60,13 +46,12 @@ async def delete_report(db: AsyncIOMotorDatabase, report_doc: dict) -> None:
         await db[name].delete_many({"report_id": report_id})
 
     await db["reports"].delete_one({"_id": report_doc["_id"]})
-    _remove_file(report_doc.get("file_path"))
+    await report_files.delete(db, report_doc)
 
 
 async def delete_user(db: AsyncIOMotorDatabase, user_id: str) -> None:
     """Delete a user account and all of its data."""
-    async for report in db["reports"].find({"user_id": user_id}, {"file_path": 1}):
-        _remove_file(report.get("file_path"))
+    await report_files.delete_all_for_user(db, user_id)
 
     for name in _USER_OWNED:
         await db[name].delete_many({"user_id": user_id})

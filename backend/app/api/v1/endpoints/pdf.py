@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.dependencies import get_current_user, get_db
-from app.core.security import decrypt_data
+from app.services import report_files
 from app.services.lab_interpretation_service import LabInterpretationService
 from app.services.pdf_service import PDFService
 from app.utils.validators import to_object_id
@@ -121,16 +121,10 @@ async def download_original_report(
     if not doc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report not found")
 
-    file_path = doc.get("file_path")
-    if not file_path:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not available")
-
     try:
-        with open(file_path, "rb") as f:
-            encrypted_content = f.read()
-        content = decrypt_data(encrypted_content)
+        content = await report_files.read(db, doc)
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not found on disk") from exc
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Report file not available") from exc
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to decrypt report"

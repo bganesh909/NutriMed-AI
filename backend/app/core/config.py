@@ -26,6 +26,15 @@ class Settings(BaseSettings):
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRY_MINUTES: int = 30
 
+    # Language model (app/services/llm_client.py). "ollama" uses the local
+    # Ollama server below; "openai" uses any OpenAI-compatible API (Groq,
+    # OpenRouter, ...) at LLM_BASE_URL -- for Groq,
+    # https://api.groq.com/openai/v1 with a model such as llama-3.3-70b-versatile.
+    LLM_PROVIDER: str = "ollama"
+    LLM_BASE_URL: str = ""
+    LLM_API_KEY: str = ""
+    LLM_MODEL: str = ""
+
     # Ollama (local LLM)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     OLLAMA_MODEL: str = "mistral:7b"

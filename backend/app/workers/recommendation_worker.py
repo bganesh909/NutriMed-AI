@@ -11,12 +11,12 @@ import logging
 import re
 from datetime import UTC, datetime
 
-import httpx
 from bson import ObjectId
 from pymongo import MongoClient
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
+from app.services import llm_client
 from app.services.generation_metrics import (
     OUTCOME_FALLBACK,
     OUTCOME_LLM_REPAIRED,
@@ -35,8 +35,6 @@ from app.services.suggestion_engine import build_suggestions
 
 logger = logging.getLogger(__name__)
 
-LLM_TIMEOUT_SECONDS = settings.LLM_TIMEOUT_SECONDS
-
 
 def _get_db():
     client = MongoClient(settings.MONGO_URI)
@@ -44,11 +42,8 @@ def _get_db():
 
 
 def _call_llm_sync(prompt: str) -> str:
-    url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-    payload = {"model": settings.OLLAMA_MODEL, "prompt": prompt, "stream": False}
-    response = httpx.post(url, json=payload, timeout=LLM_TIMEOUT_SECONDS)
-    response.raise_for_status()
-    return response.json().get("response", "")
+    """Blocking call to the configured model, for use inside Celery tasks."""
+    return llm_client.complete_sync(prompt)
 
 
 def _strip_json_comments(text: str) -> str:
@@ -514,7 +509,7 @@ def generate_diet_plan_on_request(self, report_id: str, user_id: str):
             report_id=report_id,
             dropped=warnings,
             reasons=reasons,
-            model=settings.OLLAMA_MODEL,
+            model=llm_client.model_name(),
         )
         logger.info("Diet plan ready for report %s (%s)", report_id, outcome)
     except Exception as exc:
@@ -579,7 +574,7 @@ def generate_workout_plan_on_request(self, report_id: str, user_id: str):
             user_id=user_id,
             report_id=report_id,
             dropped=warnings,
-            model=settings.OLLAMA_MODEL,
+            model=llm_client.model_name(),
         )
         logger.info("Workout plan ready for report %s (%s)", report_id, outcome)
     except Exception as exc:

@@ -79,6 +79,24 @@ cd frontend && NEXT_PUBLIC_API_URL=http://localhost:8010/api/v1 npx next dev -p 
 
 `ALLOWED_ORIGINS` must be a JSON list. OCR (8001) and Celery are unchanged.
 
+## Use Groq instead of local Ollama
+
+Plans and analysis are much faster with a hosted model. Create
+`backend/.env` (gitignored) with only these lines; the API and the Celery
+worker both start from `backend/`, so both pick it up:
+
+```bash
+LLM_PROVIDER=openai
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=gsk_...            # from https://console.groq.com
+LLM_MODEL=llama-3.3-70b-versatile
+```
+
+Restart the backend and the worker. Ollama is then not needed. Groq's free
+tier has per-minute and per-day limits; when they are hit, the app falls back
+to template plans. Only de-identified data is sent (no names, emails or report
+files). Use test data, not real patients, on a free tier.
+
 ## Where things are
 
 | Page | URL |

@@ -9,10 +9,8 @@ import json
 import logging
 from datetime import UTC
 
-import httpx
-
-from app.core.config import settings
 from app.repositories.workout_plan_repository import WorkoutPlanRepository
+from app.services import llm_client
 from app.services.generation_metrics import (
     OUTCOME_FALLBACK,
     OUTCOME_LLM_REPAIRED,
@@ -198,32 +196,23 @@ class FitnessService:
             outcome=outcome,
             user_id=user_id,
             dropped=warnings,
-            model=settings.OLLAMA_MODEL,
+            model=llm_client.model_name(),
         )
         return saved
 
     async def _call_llm(self, prompt: str) -> list | str:
-        url = f"{settings.OLLAMA_BASE_URL}/api/generate"
-        payload = {
-            "model": settings.OLLAMA_MODEL,
-            "prompt": prompt,
-            "stream": False,
-        }
+        """Ask the configured model and parse the JSON array in its answer."""
         try:
-            async with httpx.AsyncClient(timeout=settings.LLM_TIMEOUT_SECONDS) as client:
-                resp = await client.post(url, json=payload)
-                resp.raise_for_status()
-                data = resp.json()
-                text = data.get("response", "")
-                try:
-                    start = text.index("[")
-                    end = text.rindex("]") + 1
-                    return json.loads(text[start:end])
-                except (ValueError, json.JSONDecodeError):
-                    return text
-        except httpx.HTTPError as exc:
+            text = await llm_client.complete(prompt)
+        except llm_client.LLMError as exc:
             # Treated like an unusable answer: the caller serves the template
             # plan and records the fallback, as the report workers do, rather
             # than failing the request because the model is slow or down.
-            logger.warning("LLM call failed (%s): %s", type(exc).__name__, exc)
+            logger.warning("LLM call failed: %s", exc)
             return ""
+        try:
+            start = text.index("[")
+            end = text.rindex("]") + 1
+            return json.loads(text[start:end])
+        except (ValueError, json.JSONDecodeError):
+            return text

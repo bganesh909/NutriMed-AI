@@ -9,12 +9,14 @@
 #   - services run the images the CD workflow pushes to GHCR (or images built
 #     on the server with --build): no source mounts, no auto-reload.
 #   - DEBUG is forced off, so the API refuses to start on placeholder secrets.
-#   - uploads live in a named volume shared by the API and the worker.
+#   - uploaded reports are stored encrypted in MongoDB (GridFS), so the API
+#     and the worker need no shared disk.
 #   - MongoDB takes its credentials from .env and runs no seed scripts.
 #   - RabbitMQ and celery-beat are not started: Celery's broker is Redis and
 #     no periodic tasks are defined.
 #
-# Servers without an NVIDIA GPU: add -f docker-compose.cpu.yml.
+# Servers without an NVIDIA GPU: add -f docker-compose.cpu.yml. Using a hosted
+# model instead (LLM_PROVIDER=openai in .env, e.g. Groq): add --scale ollama=0.
 
 x-logging: &logging
   driver: json-file
@@ -34,8 +36,7 @@ services:
   api-gateway:
     image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-api-gateway:${IMAGE_TAG:-latest}
     ports: !reset []
-    volumes: !override
-      - uploads_data:/app/uploads
+    volumes: !reset []
     environment: *backend-env
     # Only nginx can reach the API, so its forwarded headers are trusted.
     # Without them every visitor would share nginx's IP in the rate limiter.
@@ -50,8 +51,7 @@ services:
 
   celery-worker:
     image: ${IMAGE_PREFIX:-ghcr.io/bganesh909/nutrimed}-api-gateway:${IMAGE_TAG:-latest}
-    volumes: !override
-      - uploads_data:/app/uploads
+    volumes: !reset []
     environment: *backend-env
     command: ["celery", "-A", "app.core.celery_app", "worker", "-l", "info",
               "-Q", "reports,ai,notifications", "-c", "2"]
@@ -123,6 +123,3 @@ services:
       NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx
       NGINX_ENVSUBST_FILTER: "^DOMAIN$$"
     logging: *logging
-
-volumes:
-  uploads_data:

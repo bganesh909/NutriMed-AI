@@ -231,23 +231,11 @@ async def readiness_check():
     if not grounding["ok"]:
         degraded.append("grounding")
 
-    # --- LLM ---
-    try:
-        async with httpx.AsyncClient(timeout=3) as client:
-            resp = await client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
-            resp.raise_for_status()
-            available = {m.get("name") for m in resp.json().get("models", [])}
-        if settings.OLLAMA_MODEL in available:
-            checks["llm"] = {"status": "ok", "model": settings.OLLAMA_MODEL}
-        else:
-            checks["llm"] = {
-                "status": "model_not_pulled",
-                "model": settings.OLLAMA_MODEL,
-                "available": sorted(available),
-            }
-            degraded.append("llm")
-    except Exception as exc:
-        checks["llm"] = {"status": f"unreachable: {exc}", "model": settings.OLLAMA_MODEL}
+    # --- LLM (local Ollama or an OpenAI-compatible API such as Groq) ---
+    from app.services import llm_client
+
+    checks["llm"], llm_ok = await llm_client.readiness()
+    if not llm_ok:
         degraded.append("llm")
 
     # --- OCR service ---

@@ -14,6 +14,7 @@ from pymongo import MongoClient
 
 from app.core.celery_app import celery_app
 from app.core.config import settings
+from app.services import report_files
 
 logger = logging.getLogger(__name__)
 
@@ -28,17 +29,20 @@ def _get_db():
 
 
 @celery_app.task(name="tasks.process_ocr", bind=True, max_retries=3)
-def process_ocr(self, report_id: str, file_path: str):
+def process_ocr(self, report_id: str, file_path: str | None = None):
     """
-    1. Read the uploaded file from disk.
+    1. Read the report's uploaded file (GridFS, or local disk for old reports).
     2. POST it to the OCR microservice for text extraction.
     3. Store the raw OCR result in MongoDB and set status to 'ocr_completed'.
     4. Dispatch the biomarker extraction task.
+
+    ``file_path`` is ignored: tasks queued before files moved to GridFS still
+    pass it, and the report document says where its file is.
     """
     db = _get_db()
     report_oid = ObjectId(report_id)
 
-    logger.info("Starting OCR processing for report %s (file: %s)", report_id, file_path)
+    logger.info("Starting OCR processing for report %s", report_id)
 
     # Mark the report as processing
     db.reports.update_one(
@@ -47,13 +51,13 @@ def process_ocr(self, report_id: str, file_path: str):
     )
 
     try:
-        # Uploaded files are stored AES-encrypted on disk; decrypt before OCR.
-        from app.core.security import decrypt_data
-
-        with open(file_path, "rb") as f:
-            file_bytes = decrypt_data(f.read())
-
-        filename = file_path.rsplit("/", 1)[-1]
+        report = db.reports.find_one({"_id": report_oid})
+        if not report:
+            raise ValueError(f"Report {report_id} not found")
+        # Stored AES-encrypted; read_sync returns the decrypted bytes.
+        file_bytes = report_files.read_sync(db, report)
+        # The OCR service picks its extractor from the file extension.
+        filename = report.get("original_filename") or "report.pdf"
         response = httpx.post(
             OCR_SERVICE_URL,
             files={"file": (filename, file_bytes)},
